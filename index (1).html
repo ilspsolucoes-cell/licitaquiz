@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="LicitaQuiz — Capacitação gamificada em Licitações e Contratos Públicos">
+<meta name="theme-color" content="#0A1628">
+<title>LicitaQuiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --c-bg:#070E1A; --c-bg2:#0D1B2E; --c-bg3:#132238;
+  --c-surface:rgba(19,34,56,0.85);
+  --c-border:rgba(195,159,67,0.18); --c-border2:rgba(195,159,67,0.35);
+  --c-gold:#C39F43; --c-gold2:#E2C06A; --c-gold3:#F5DFA0;
+  --c-teal:#15806E; --c-teal2:#1CA88E;
+  --c-red:#B03020; --c-red2:#D44030;
+  --c-green:#177A47; --c-green2:#1FA860;
+  --c-text:#EDE8DC; --c-muted:rgba(237,232,220,0.42); --c-muted2:rgba(237,232,220,0.22);
+  --c-ans-a:#143556; --c-ans-b:#3D1A0E; --c-ans-c:#0E3824; --c-ans-d:#30104A;
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:24px;
+  --f-body:'Outfit',sans-serif; --f-mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{height:100%;font-size:16px;}
+body{height:100%;font-family:var(--f-body);background:var(--c-bg);color:var(--c-text);overflow:hidden;-webkit-font-smoothing:antialiased;}
+#root{display:flex;flex-direction:column;height:100vh;position:relative;}
+#root::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(195,159,67,0.07) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 80% 90%,rgba(21,128,110,0.06) 0%,transparent 60%),repeating-linear-gradient(0deg,transparent,transparent 48px,rgba(255,255,255,0.012) 48px,rgba(255,255,255,0.012) 49px);pointer-events:none;z-index:0;}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:54px;background:rgba(7,14,26,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--c-border);flex-shrink:0;position:relative;z-index:100;}
+.hdr-logo{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+.hdr-emblem{width:34px;height:34px;background:var(--c-gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 16px rgba(195,159,67,0.35);}
+.hdr-wordmark strong{display:block;font-size:15px;font-weight:800;color:var(--c-gold2);}
+.hdr-wordmark span{display:block;font-size:9px;color:var(--c-muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px;}
+.hdr-nav{display:flex;gap:4px;}
+.hdr-nav-btn{background:transparent;border:1px solid transparent;color:var(--c-muted);padding:5px 12px;border-radius:20px;font-family:var(--f-body);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;}
+.hdr-nav-btn:hover{color:var(--c-gold3);border-color:var(--c-border);}
+.hdr-nav-btn.on{color:var(--c-gold2);border-color:var(--c-border2);background:rgba(195,159,67,0.09);}
+.hdr-user{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--c-muted);}
+.hdr-avatar{width:28px;height:28px;border-radius:50%;background:var(--c-bg3);border:1px solid var(--c-border2);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;}
+
+/* SCREENS */
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden;position:relative;z-index:1;}
+.screen.active{display:flex;}
+.scroll{flex:1;overflow-y:auto;padding:22px;}
+.scroll::-webkit-scrollbar{width:4px;}
+.scroll::-webkit-scrollbar-thumb{background:var(--c-border2);border-radius:2px;}
+
+/* TYPOGRAPHY */
+.pg-title{font-size:21px;font-weight:800;color:var(--c-gold2);margin-bottom:4px;}
+.pg-sub{font-size:13px;color:var(--c-muted);margin-bottom:20px;line-height:1.5;}
+.lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;border-radius:var(--r-sm);padding:11px 20px;font-family:var(--f-body);font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;position:relative;overflow:hidden;}
+.btn:active{transform:scale(0.97);}
+.btn:disabled{opacity:.32;cursor:not-allowed;transform:none!important;}
+.btn-gold{background:var(--c-gold);color:#060d18;box-shadow:0 4px 0 rgba(0,0,0,.4),0 0 20px rgba(195,159,67,.25);}
+.btn-gold:hover{background:var(--c-gold2);transform:translateY(-1px);box-shadow:0 5px 0 rgba(0,0,0,.4),0 0 28px rgba(195,159,67,.35);}
+.btn-gold:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4);}
+.btn-teal{background:var(--c-teal);color:white;box-shadow:0 4px 0 rgba(0,0,0,.4);}
+.btn-teal:hover{background:var(--c-teal2);transform:translateY(-1px);}
+.btn-outline{background:transparent;border:1.5px solid var(--c-border2);color:var(--c-gold3);}
+.btn-outline:hover{background:rgba(195,159,67,.08);border-color:rgba(195,159,67,.5);}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--c-muted);}
+.btn-ghost:hover{background:rgba(255,255,255,.1);color:var(--c-text);}
+.btn-danger{background:rgba(176,48,32,.2);border:1px solid rgba(176,48,32,.35);color:#e05040;}
+.btn-danger:hover{background:rgba(176,48,32,.35);}
+.btn-lg{padding:14px 28px;font-size:15px;border-radius:var(--r-md);}
+.btn-sm{padding:7px 13px;font-size:11px;border-radius:6px;}
+.btn-full{width:100%;}
+
+/* INPUTS */
+.inp{width:100%;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:var(--r-sm);padding:11px 14px;color:var(--c-text);font-size:14px;font-family:var(--f-body);outline:none;transition:border-color .18s,box-shadow .18s;}
+.inp:focus{border-color:var(--c-gold);box-shadow:0 0 0 3px rgba(195,159,67,.12);}
+.inp::placeholder{color:var(--c-muted2);font-size:13px;}
+.inp-xl{font-size:28px;font-weight:800;text-align:center;letter-spacing:8px;padding:16px;font-family:var(--f-mono);}
+textarea.inp{resize:vertical;min-height:74px;line-height:1.5;}
+select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23C39F43'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;}
+
+/* CARDS */
+.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);backdrop-filter:blur(10px);}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+.badge-gold{background:rgba(195,159,67,.2);border:1px solid rgba(195,159,67,.35);color:var(--c-gold2);}
+.badge-teal{background:rgba(21,128,110,.2);border:1px solid rgba(21,128,110,.35);color:var(--c-teal2);}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--c-bg3);border:1px solid var(--c-gold);border-radius:24px;color:var(--c-gold2);padding:10px 22px;font-size:13px;font-weight:600;box-shadow:0 8px 40px rgba(0,0,0,.6);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:9999;white-space:nowrap;pointer-events:none;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.err{border-color:var(--c-red2);color:#f06050;}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:rgba(7,14,26,.85);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:8888;opacity:0;pointer-events:none;transition:opacity .2s;}
+#loader.show{opacity:1;pointer-events:all;}
+.loader-ring{width:48px;height:48px;border:3px solid rgba(195,159,67,.2);border-top-color:var(--c-gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-msg{font-size:14px;color:var(--c-muted);font-weight:500;}
+
+/* HOME */
+.home-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:28px;}
+.home-hero{text-align:center;}
+.home-emblem{width:88px;height:88px;background:var(--c-gold);border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 0 0 8px rgba(195,159,67,.1),0 0 40px rgba(195,159,67,.3);animation:emblemPulse 3s ease-in-out infinite;}
+@keyframes emblemPulse{0%,100%{box-shadow:0 0 0 8px rgba(195,159,67,.1),0 0 40px rgba(195,159,67,.3);}50%{box-shadow:0 0 0 14px rgba(195,159,67,.07),0 0 60px rgba(195,159,67,.25);}}
+.home-title{font-size:38px;font-weight:900;color:var(--c-gold2);letter-spacing:-.5px;}
+.home-tagline{font-size:13px;color:var(--c-muted);margin-top:8px;max-width:320px;line-height:1.6;}
+.home-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.home-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;width:100%;max-width:620px;}
+.home-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);}
+.home-card:hover{border-color:var(--c-border2);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.home-card-icon{font-size:32px;margin-bottom:10px;}
+.home-card-title{font-size:14px;font-weight:800;color:var(--c-gold2);margin-bottom:5px;}
+.home-card-desc{font-size:11px;color:var(--c-muted);line-height:1.5;}
+
+/* AUTH */
+.auth-body{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
+.auth-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:32px 28px;width:100%;max-width:380px;backdrop-filter:blur(14px);}
+.auth-icon{font-size:38px;text-align:center;margin-bottom:14px;}
+.auth-title{font-size:21px;font-weight:800;color:var(--c-gold2);text-align:center;margin-bottom:4px;}
+.auth-sub{font-size:12px;color:var(--c-muted);text-align:center;margin-bottom:24px;line-height:1.5;}
+.auth-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.auth-link{font-size:12px;color:var(--c-muted);text-align:center;margin-top:14px;}
+.auth-link a{color:var(--c-gold2);cursor:pointer;font-weight:600;text-decoration:none;}
+.auth-link a:hover{text-decoration:underline;}
+
+/* DASHBOARD */
+.dash-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+.dash-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.quiz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+.qcard{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-md);overflow:hidden;transition:all .18s;backdrop-filter:blur(8px);}
+.qcard:hover{border-color:var(--c-border2);transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.5);}
+.qcard-thumb{height:72px;display:flex;align-items:center;justify-content:center;font-size:32px;position:relative;}
+.qcard-cnt{position:absolute;top:8px;right:8px;background:var(--c-gold);color:#060d18;font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;font-family:var(--f-mono);}
+.qcard-body{padding:12px 14px;}
+.qcard-title{font-size:13px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qcard-desc{font-size:11px;color:var(--c-muted);margin-bottom:10px;}
+.qcard-btns{display:flex;gap:5px;}
+
+/* EDIT */
+.edit-topbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(7,14,26,.7);border-bottom:1px solid var(--c-border);flex-shrink:0;flex-wrap:wrap;}
+.edit-title-inp{flex:1;min-width:140px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:7px 12px;color:var(--c-gold2);font-size:14px;font-weight:700;font-family:var(--f-body);outline:none;}
+.edit-title-inp:focus{border-color:var(--c-gold);}
+.edit-layout{flex:1;display:flex;overflow:hidden;}
+.edit-sidebar{width:186px;flex-shrink:0;border-right:1px solid var(--c-border);display:flex;flex-direction:column;overflow:hidden;}
+.edit-sidebar-top{padding:10px;border-bottom:1px solid var(--c-border);}
+.edit-qlist{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;}
+.edit-qlist::-webkit-scrollbar{width:3px;}
+.edit-qlist::-webkit-scrollbar-thumb{background:var(--c-border2);}
+.edit-qitem{background:rgba(255,255,255,.03);border:1px solid transparent;border-radius:var(--r-sm);padding:8px 10px;cursor:pointer;transition:all .15s;}
+.edit-qitem:hover,.edit-qitem.active{background:rgba(195,159,67,.1);border-color:rgba(195,159,67,.3);}
+.edit-qitem-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--c-muted);margin-bottom:3px;}
+.edit-qitem-text{font-size:11px;color:rgba(237,232,220,.65);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.edit-main{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px;}
+.edit-main::-webkit-scrollbar{width:4px;}
+.edit-main::-webkit-scrollbar-thumb{background:var(--c-border2);}
+.opts-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.opt-row{display:flex;align-items:center;gap:7px;}
+.opt-letter{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:rgba(255,255,255,.85);flex-shrink:0;}
+.opt-inp{flex:1;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:6px;padding:8px 10px;color:var(--c-text);font-size:12px;font-family:var(--f-body);outline:none;transition:border-color .15s;}
+.opt-inp:focus{border-color:var(--c-gold);}
+.opt-check{width:24px;height:24px;border-radius:6px;border:2px solid rgba(255,255,255,.18);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all .15s;}
+.opt-check.on{background:var(--c-green2);border-color:var(--c-green2);}
+
+/* LOBBY */
+.lobby-layout{flex:1;display:flex;flex-direction:column;padding:16px 20px;gap:14px;overflow:hidden;}
+.lobby-top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;}
+.lobby-pin-card{background:rgba(0,0,0,.35);border:2px dashed rgba(195,159,67,.3);border-radius:var(--r-lg);padding:14px 20px;text-align:center;flex-shrink:0;}
+.lobby-pin-lbl{font-size:8px;font-weight:800;letter-spacing:3px;color:var(--c-muted);margin-bottom:4px;}
+.lobby-pin-num{font-size:46px;font-weight:900;color:var(--c-gold2);letter-spacing:10px;font-family:var(--f-mono);line-height:1;}
+.lobby-pin-actions{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+.lobby-meta{flex:1;min-width:160px;}
+.lobby-quiz-title{font-size:17px;font-weight:800;margin-bottom:6px;}
+.lobby-quiz-meta{font-size:12px;color:var(--c-muted);margin-bottom:12px;}
+.lobby-players-box{flex:1;background:rgba(0,0,0,.22);border:1px solid var(--c-border);border-radius:var(--r-md);padding:14px;overflow-y:auto;min-height:90px;max-height:200px;}
+.players-chips{display:flex;flex-wrap:wrap;gap:7px;}
+.player-chip{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;animation:chipIn .3s ease;}
+@keyframes chipIn{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+.lobby-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0;}
+.lobby-hint{font-size:12px;color:var(--c-muted);}
+.lobby-hint strong{color:var(--c-gold);font-family:var(--f-mono);}
+
+/* QUESTION HUD */
+.qhost-layout{flex:1;display:flex;flex-direction:column;padding:14px 18px;gap:11px;overflow:hidden;}
+.qhud{display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.timer-orb{width:58px;height:58px;border-radius:50%;background:var(--c-gold);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#060d18;font-family:var(--f-mono);flex-shrink:0;transition:background .4s;box-shadow:0 0 20px rgba(195,159,67,.3);}
+.timer-orb.danger{background:var(--c-red2);color:white;animation:orbDanger .5s ease infinite;box-shadow:0 0 20px rgba(176,48,32,.5);}
+@keyframes orbDanger{0%,100%{transform:scale(1);}50%{transform:scale(1.07);}}
+.hud-center{flex:1;}
+.hud-label{font-size:11px;color:var(--c-muted);margin-bottom:5px;}
+.hud-bar{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.hud-bar-fill{height:100%;background:var(--c-gold);border-radius:3px;transition:width 1s linear;}
+.hud-right{text-align:right;}
+.hud-count{font-size:22px;font-weight:800;color:var(--c-gold2);font-family:var(--f-mono);}
+.hud-count-lbl{font-size:10px;color:var(--c-muted);}
+.q-textbox{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-md);padding:18px 22px;text-align:center;flex-shrink:0;}
+.q-textbox h2{font-size:18px;font-weight:700;line-height:1.5;color:var(--c-text);}
+.ans-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:hidden;}
+.ans-btn{border:none;border-radius:var(--r-md);padding:12px 14px;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;font-family:var(--f-body);font-size:12px;font-weight:700;color:rgba(255,255,255,.9);box-shadow:0 5px 0 rgba(0,0,0,.4);transition:all .18s;}
+.ans-btn:hover{transform:translateY(-2px);box-shadow:0 7px 0 rgba(0,0,0,.4);}
+.ans-btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4);}
+.ans-btn.revealed-correct{background:var(--c-green)!important;animation:correctFlash .4s ease;box-shadow:0 5px 0 rgba(0,0,0,.4),0 0 20px rgba(23,122,71,.5)!important;}
+.ans-btn.revealed-wrong{opacity:.38!important;transform:none!important;}
+@keyframes correctFlash{0%{transform:scale(1);}40%{transform:scale(1.03);}100%{transform:scale(1);}}
+.ans-a{background:var(--c-ans-a);}.ans-b{background:var(--c-ans-b);}.ans-c{background:var(--c-ans-c);}.ans-d{background:var(--c-ans-d);}
+.ans-letter{width:28px;height:28px;border-radius:6px;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0;}
+.ans-text{flex:1;font-size:12px;line-height:1.4;}
+.qhost-footer{display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;}
+
+/* RESULTS */
+.res-layout{flex:1;display:flex;flex-direction:column;padding:14px 20px;gap:12px;overflow:hidden;}
+.res-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0;}
+.res-qtxt{background:rgba(255,255,255,.03);border-radius:var(--r-sm);padding:11px 15px;flex-shrink:0;}
+.res-qtxt p{font-size:11px;color:var(--c-muted);margin-bottom:3px;}
+.res-qtxt h3{font-size:14px;font-weight:600;line-height:1.4;}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:110px;background:rgba(0,0,0,.22);border-radius:var(--r-md);padding:12px 14px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;}
+.bar-body{width:100%;border-radius:5px 5px 0 0;min-height:6px;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;font-size:11px;font-weight:700;color:white;transition:height .8s ease;}
+.bar-lbl{font-size:10px;color:var(--c-muted);}
+.opt-review-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;flex-shrink:0;}
+.opt-rv{border-radius:var(--r-sm);padding:9px 12px;display:flex;align-items:center;gap:9px;}
+.opt-rv.ok{background:rgba(23,122,71,.18);border:1.5px solid rgba(23,122,71,.35);}
+.opt-rv.no{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);opacity:.6;}
+.opt-rv-ltr{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;flex-shrink:0;}
+.opt-rv-txt{flex:1;font-size:11px;color:rgba(237,232,220,.8);line-height:1.3;}
+.opt-rv-tag{font-size:9px;font-weight:800;color:var(--c-green2);white-space:nowrap;}
+
+/* PODIUM */
+.podium-layout{flex:1;display:flex;flex-direction:column;align-items:center;padding:16px 20px 0;overflow:hidden;}
+.podium-hdr{text-align:center;margin-bottom:14px;flex-shrink:0;}
+.podium-hdr h1{font-size:26px;font-weight:900;color:var(--c-gold2);}
+.podium-hdr p{font-size:12px;color:var(--c-muted);margin-top:4px;}
+.rank-list{width:100%;max-width:420px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-bottom:8px;}
+.rank-list::-webkit-scrollbar{width:3px;}
+.rank-row{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-sm);padding:10px 14px;display:flex;align-items:center;gap:12px;animation:rankIn .4s ease both;}
+@keyframes rankIn{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:none;}}
+.rank-row.r1{border-color:var(--c-gold);background:rgba(195,159,67,.1);}
+.rank-row.r2{border-color:rgba(180,180,200,.35);}
+.rank-row.r3{border-color:rgba(160,115,58,.35);}
+.rank-pos{font-size:15px;font-weight:900;font-family:var(--f-mono);width:28px;text-align:center;color:var(--c-muted);}
+.rank-pos.p1{color:var(--c-gold2);}.rank-pos.p2{color:#b4b4c8;}.rank-pos.p3{color:#a07838;}
+.rank-av{font-size:20px;}.rank-name{flex:1;font-size:14px;font-weight:700;}
+.rank-score{font-size:14px;font-weight:800;color:var(--c-gold2);font-family:var(--f-mono);}
+.podium-actions{padding:14px 0;display:flex;gap:10px;flex-shrink:0;}
+
+/* JOIN / NICK / WAIT */
+.join-body{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
+.join-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:32px 28px;width:100%;max-width:360px;text-align:center;backdrop-filter:blur(14px);}
+.join-icon{font-size:42px;margin-bottom:12px;}
+.join-title{font-size:21px;font-weight:800;color:var(--c-gold2);margin-bottom:4px;}
+.join-sub{font-size:12px;color:var(--c-muted);margin-bottom:24px;line-height:1.5;}
+.divider-or{display:flex;align-items:center;gap:10px;color:var(--c-muted);font-size:11px;margin:14px 0;}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--c-border);}
+.nick-body{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;}
+.nick-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:28px;width:100%;max-width:360px;backdrop-filter:blur(14px);}
+.av-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:16px;}
+.av-btn{font-size:24px;padding:7px;border-radius:8px;cursor:pointer;border:2px solid transparent;background:rgba(255,255,255,.04);transition:all .15s;text-align:center;}
+.av-btn:hover,.av-btn.on{border-color:var(--c-gold);background:rgba(195,159,67,.14);}
+.wait-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;}
+.wait-spinner{width:42px;height:42px;border:3px solid rgba(195,159,67,.18);border-top-color:var(--c-gold);border-radius:50%;animation:spin .85s linear infinite;}
+
+/* PLAYER Q */
+.qplayer-layout{flex:1;display:flex;flex-direction:column;padding:12px 16px;gap:10px;overflow:hidden;}
+.player-ans-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.player-ans{border:none;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:26px;font-weight:900;font-family:var(--f-mono);color:rgba(255,255,255,.9);box-shadow:0 5px 0 rgba(0,0,0,.4);transition:all .18s;}
+.player-ans:hover{transform:translateY(-2px);box-shadow:0 7px 0 rgba(0,0,0,.4);}
+.player-ans:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4);}
+.player-ans:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.player-sent{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;}
+
+/* FEEDBACK */
+.fb-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;}
+.fb-icon-ring{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;animation:fbBounce .5s ease;}
+@keyframes fbBounce{0%{transform:scale(.5);opacity:0;}70%{transform:scale(1.08);}100%{transform:scale(1);opacity:1;}}
+.fb-pts-card{background:rgba(195,159,67,.12);border:1px solid rgba(195,159,67,.3);border-radius:var(--r-md);padding:14px 28px;}
+
+/* PLAYER PODIUM */
+.pplayer-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
+.pplayer-rank-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);padding:20px 32px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+
+/* STUDY */
+.study-cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:11px;margin-bottom:18px;}
+.cat-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-md);padding:14px;cursor:pointer;transition:all .18s;backdrop-filter:blur(8px);}
+.cat-card:hover,.cat-card.on{border-color:var(--c-border2);background:rgba(195,159,67,.08);transform:translateY(-1px);}
+.cat-card.on{border-color:var(--c-gold);}
+.cat-icon{font-size:26px;margin-bottom:7px;}.cat-name{font-size:13px;font-weight:700;color:var(--c-gold3);margin-bottom:3px;}.cat-count{font-size:11px;color:var(--c-muted);}
+.study-q-layout{flex:1;display:flex;flex-direction:column;padding:14px 18px;gap:12px;overflow:hidden;}
+.expl-box{background:rgba(21,128,110,.12);border:1px solid rgba(21,128,110,.28);border-radius:var(--r-md);padding:13px 16px;overflow-y:auto;max-height:170px;flex-shrink:0;}
+.expl-box::-webkit-scrollbar{width:3px;}
+.expl-box h4{font-size:11px;font-weight:800;color:var(--c-teal2);margin-bottom:7px;}
+.expl-box p{font-size:12px;color:rgba(237,232,220,.85);line-height:1.7;}
+.study-final-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:18px;text-align:center;}
+.study-stat-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.stat-box{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-md);padding:14px 20px;text-align:center;min-width:90px;}
+.stat-val{font-size:26px;font-weight:900;color:var(--c-gold2);font-family:var(--f-mono);}
+.stat-lbl{font-size:9px;color:var(--c-muted);margin-top:3px;letter-spacing:1px;text-transform:uppercase;}
+
+/* BANCO */
+.banco-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.filter-pill{background:rgba(255,255,255,.04);border:1px solid var(--c-border);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;color:var(--c-muted);transition:all .15s;}
+.filter-pill.on{background:rgba(195,159,67,.14);border-color:var(--c-border2);color:var(--c-gold2);}
+.banco-items{display:flex;flex-direction:column;gap:7px;}
+.banco-item{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-sm);padding:12px 14px;}
+.banco-item-q{font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.4;}
+.banco-item-foot{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.banco-add-btn{margin-left:auto;background:transparent;border:none;color:var(--c-teal2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f-body);}
+.banco-add-btn:hover{text-decoration:underline;}
+
+/* RELATÓRIO */
+.rel-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.rel-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.rel-stat{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-md);padding:12px 16px;min-width:90px;text-align:center;}
+.rel-stat-val{font-size:22px;font-weight:800;color:var(--c-gold2);font-family:var(--f-mono);}
+.rel-stat-lbl{font-size:9px;color:var(--c-muted);margin-top:2px;letter-spacing:1px;text-transform:uppercase;}
+.rel-table{width:100%;border-collapse:collapse;font-size:12px;}
+.rel-table th{background:rgba(255,255,255,.04);padding:8px 12px;text-align:left;font-size:9px;color:var(--c-muted);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--c-border);}
+.rel-table td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.03);}
+.rel-table tr:last-child td{border-bottom:none;}
+.score-bar-bg{background:rgba(255,255,255,.06);border-radius:3px;height:5px;width:100%;margin-top:3px;}
+.score-bar{height:5px;border-radius:3px;background:var(--c-gold);}
+
+/* AI */
+.ai-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;}
+.ai-dots{display:flex;gap:8px;}
+.ai-dot{width:10px;height:10px;border-radius:50%;background:var(--c-gold);animation:dotPop 1.4s ease infinite;}
+.ai-dot:nth-child(2){animation-delay:.2s;}.ai-dot:nth-child(3){animation-delay:.4s;}
+@keyframes dotPop{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="toast"></div>
+  <div id="loader"><div class="loader-ring"></div><div class="loader-msg" id="loader-msg">Carregando...</div></div>
+
+  <header class="hdr">
+    <div class="hdr-logo" onclick="goHome()">
+      <div class="hdr-emblem">⚖️</div>
+      <div class="hdr-wordmark"><strong>LicitaQuiz</strong><span>Lei 14.133/2021</span></div>
+    </div>
+    <nav class="hdr-nav">
+      <button class="hdr-nav-btn" id="nav-dash" onclick="goHost()">Instrutor</button>
+      <button class="hdr-nav-btn" id="nav-aluno" onclick="showScreen('join')">Aluno</button>
+      <button class="hdr-nav-btn" id="nav-estudo" onclick="goStudy()">Estudar</button>
+      <button class="hdr-nav-btn" id="nav-banco" onclick="showScreen('banco')">Banco</button>
+    </nav>
+    <div class="hdr-user">
+      <span id="hdr-user-name"></span>
+      <div class="hdr-avatar" id="hdr-avatar-btn" onclick="handleAvatarClick()">👤</div>
+    </div>
+  </header>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="home-body">
+      <div class="home-hero">
+        <div class="home-emblem">⚖️</div>
+        <div class="home-title">LicitaQuiz</div>
+        <div class="home-tagline">Plataforma de capacitação gamificada em Licitações e Contratos Públicos — Lei 14.133/2021</div>
+      </div>
+      <div class="home-actions">
+        <button class="btn btn-gold btn-lg" onclick="goHost()">🏫 Área do Instrutor</button>
+        <button class="btn btn-outline btn-lg" onclick="showScreen('join')">🎓 Sou Aluno</button>
+      </div>
+      <div class="home-cards">
+        <div class="home-card" onclick="goStudy()">
+          <div class="home-card-icon">📚</div>
+          <div class="home-card-title">Modo Estudo</div>
+          <div class="home-card-desc">Estude sozinho com explicações da IA após cada resposta</div>
+        </div>
+        <div class="home-card" onclick="showScreen('banco')">
+          <div class="home-card-icon">🗄️</div>
+          <div class="home-card-title">Banco de Questões</div>
+          <div class="home-card-desc">+30 questões técnicas por tema da Lei 14.133/2021</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen" id="screen-login">
+    <div class="auth-body"><div class="auth-card">
+      <div class="auth-icon">🏛️</div>
+      <div class="auth-title">Acesso do Instrutor</div>
+      <div class="auth-sub">Entre com sua conta para gerenciar quizzes e turmas</div>
+      <div class="auth-fields">
+        <input type="email" class="inp" id="login-email" placeholder="E-mail">
+        <input type="password" class="inp" id="login-pass" placeholder="Senha">
+      </div>
+      <button class="btn btn-gold btn-full" onclick="doLogin()">Entrar</button>
+      <div class="auth-link">Ainda não tem conta? <a onclick="showScreen('signup')">Criar agora</a></div>
+    </div></div>
+  </div>
+
+  <!-- SIGNUP -->
+  <div class="screen" id="screen-signup">
+    <div class="auth-body"><div class="auth-card">
+      <div class="auth-icon">✍️</div>
+      <div class="auth-title">Criar Conta</div>
+      <div class="auth-sub">Crie sua conta de instrutor para começar</div>
+      <div class="auth-fields">
+        <input type="text" class="inp" id="su-name" placeholder="Nome completo">
+        <input type="email" class="inp" id="su-email" placeholder="E-mail">
+        <input type="password" class="inp" id="su-pass" placeholder="Senha (mín. 6 caracteres)">
+        <input type="text" class="inp" id="su-org" placeholder="Órgão / Instituição (opcional)">
+        <input type="text" class="inp" id="su-oab" placeholder="Nº OAB (opcional)">
+      </div>
+      <button class="btn btn-gold btn-full" onclick="doSignup()">Criar Conta</button>
+      <div class="auth-link">Já tem conta? <a onclick="showScreen('login')">Entrar</a></div>
+    </div></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="screen" id="screen-dash">
+    <div class="scroll">
+      <div class="dash-topbar">
+        <div><div class="pg-title">Meus Quizzes</div><div class="pg-sub">Gerencie e aplique quizzes para suas turmas</div></div>
+        <div class="dash-actions">
+          <button class="btn btn-ghost btn-sm" onclick="showRelatorio()">📊 Relatório</button>
+          <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sair</button>
+          <button class="btn btn-outline btn-sm" onclick="doGenerateAIQuiz()">✨ Gerar com IA</button>
+          <button class="btn btn-gold btn-sm" onclick="createQuiz()">+ Novo Quiz</button>
+        </div>
+      </div>
+      <div class="quiz-grid" id="quiz-grid"></div>
+    </div>
+  </div>
+
+  <!-- EDIT -->
+  <div class="screen" id="screen-edit">
+    <div class="edit-topbar">
+      <button class="btn btn-ghost btn-sm" onclick="saveAndBack()">← Voltar</button>
+      <input type="text" class="edit-title-inp" id="edit-quiz-title" placeholder="Título do Quiz">
+      <button class="btn btn-ghost btn-sm" onclick="doGenerateAIQs()">✨ IA: Gerar Perguntas</button>
+      <button class="btn btn-teal btn-sm" onclick="saveQuiz()">💾 Salvar</button>
+      <button class="btn btn-gold btn-sm" onclick="saveAndPlay()">▶ Iniciar Jogo</button>
+    </div>
+    <div class="edit-layout">
+      <div class="edit-sidebar">
+        <div class="edit-sidebar-top"><button class="btn btn-outline btn-sm btn-full" onclick="addQuestion()">+ Pergunta</button></div>
+        <div class="edit-qlist" id="edit-qlist"></div>
+      </div>
+      <div class="edit-main" id="edit-main"><div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--c-muted);font-size:13px;">Adicione ou selecione uma pergunta</div></div>
+    </div>
+  </div>
+
+  <!-- HOST LOBBY -->
+  <div class="screen" id="screen-lobby">
+    <div class="lobby-layout">
+      <div class="lobby-top">
+        <div class="lobby-pin-card">
+          <div class="lobby-pin-lbl">Código de Acesso</div>
+          <div class="lobby-pin-num" id="lobby-pin">------</div>
+          <div class="lobby-pin-actions">
+            <button class="btn btn-outline btn-sm" onclick="copyPin()">📋 Copiar</button>
+            <button class="btn btn-ghost btn-sm" onclick="sharePin()">📤 Compartilhar</button>
+          </div>
+        </div>
+        <div class="lobby-meta">
+          <div class="lobby-quiz-title" id="lobby-quiz-name">—</div>
+          <div class="lobby-quiz-meta" id="lobby-quiz-meta">—</div>
+          <img id="lobby-qr" width="80" height="80" style="border-radius:8px;background:white;padding:4px;" src="" alt="QR">
+        </div>
+      </div>
+      <div>
+        <div class="lbl" id="lobby-cnt-lbl">PARTICIPANTES — 0</div>
+        <div class="lobby-players-box"><div class="players-chips" id="lobby-chips"><span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span></div></div>
+      </div>
+      <div class="lobby-footer">
+        <div class="lobby-hint">Alunos acessam o site e digitam <strong id="lobby-hint-pin">------</strong></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" onclick="cancelLobby()">Cancelar</button>
+          <button class="btn btn-gold btn-lg" onclick="startGame()">▶ Iniciar Sessão</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOST QUESTION -->
+  <div class="screen" id="screen-host-q">
+    <div class="qhost-layout">
+      <div class="qhud">
+        <div class="timer-orb" id="host-timer">—</div>
+        <div class="hud-center">
+          <div class="hud-label" id="host-q-prog">Pergunta 1 de 5</div>
+          <div class="hud-bar"><div class="hud-bar-fill" id="host-q-bar" style="width:20%"></div></div>
+        </div>
+        <div class="hud-right"><div class="hud-count" id="host-resp-n">0</div><div class="hud-count-lbl">respostas</div></div>
+      </div>
+      <div class="q-textbox"><h2 id="host-q-text">—</h2></div>
+      <div class="ans-grid" id="host-ans-grid"></div>
+      <div class="qhost-footer"><button class="btn btn-ghost btn-sm" onclick="forceResults()">Ver resultados →</button></div>
+    </div>
+  </div>
+
+  <!-- HOST RESULTS -->
+  <div class="screen" id="screen-host-res">
+    <div class="res-layout">
+      <div class="res-topbar">
+        <div><div class="pg-title" style="font-size:17px;">📊 Resultado</div><div class="pg-sub" style="margin-bottom:0;" id="res-count">0 respostas</div></div>
+        <button class="btn btn-gold" id="next-q-btn" onclick="nextQuestion()">Próxima →</button>
+      </div>
+      <div class="res-qtxt"><p>Pergunta:</p><h3 id="res-q-text">—</h3></div>
+      <div class="chart-bars" id="res-chart"></div>
+      <div class="opt-review-grid" id="res-opts"></div>
+    </div>
+  </div>
+
+  <!-- HOST PODIUM -->
+  <div class="screen" id="screen-podium">
+    <div class="podium-layout">
+      <div class="podium-hdr"><h1>🏆 Classificação Final</h1><p id="podium-quiz-name">—</p></div>
+      <div class="rank-list" id="rank-list"></div>
+      <div class="podium-actions">
+        <button class="btn btn-outline" onclick="downloadCSV()">📥 Baixar Relatório CSV</button>
+        <button class="btn btn-gold" onclick="goHome()">Encerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOIN -->
+  <div class="screen" id="screen-join">
+    <div class="join-body"><div class="join-card">
+      <div class="join-icon">🎓</div>
+      <div class="join-title">Entrar no Quiz</div>
+      <div class="join-sub">Digite o código de 6 dígitos fornecido pelo instrutor</div>
+      <input type="text" class="inp inp-xl" id="join-pin" placeholder="000000" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+      <div style="margin-top:12px;"><button class="btn btn-gold btn-full btn-lg" onclick="joinGame()">Entrar</button></div>
+      <div class="divider-or">ou</div>
+      <button class="btn btn-outline btn-full" onclick="goHost()">Sou Instrutor →</button>
+    </div></div>
+  </div>
+
+  <!-- NICK -->
+  <div class="screen" id="screen-nick">
+    <div class="nick-body"><div class="nick-card">
+      <div style="font-size:16px;font-weight:800;color:var(--c-gold2);margin-bottom:4px;text-align:center;">Seu perfil</div>
+      <div style="font-size:12px;color:var(--c-muted);margin-bottom:16px;text-align:center;">Como você quer aparecer na sessão?</div>
+      <div class="av-grid" id="av-grid"></div>
+      <input type="text" class="inp" id="nick-inp" placeholder="Seu nome (máx. 20 caracteres)" maxlength="20" style="margin-bottom:12px;">
+      <button class="btn btn-gold btn-full" onclick="joinWithNick()">Entrar na Sessão</button>
+    </div></div>
+  </div>
+
+  <!-- PLAYER WAITING -->
+  <div class="screen" id="screen-wait">
+    <div class="wait-body">
+      <div style="font-size:48px;">⚖️</div>
+      <div style="font-size:18px;font-weight:800;color:var(--c-gold2);">Você está dentro!</div>
+      <div id="wait-profile" style="font-size:22px;"></div>
+      <div style="font-size:13px;color:var(--c-muted);">Aguardando o instrutor iniciar...</div>
+      <div class="wait-spinner"></div>
+      <div style="font-size:12px;color:var(--c-muted2);">PIN: <span id="wait-pin" style="color:var(--c-gold);font-family:var(--f-mono);font-weight:700;"></span></div>
+    </div>
+  </div>
+
+  <!-- PLAYER QUESTION -->
+  <div class="screen" id="screen-player-q">
+    <div class="qplayer-layout">
+      <div class="qhud">
+        <div class="timer-orb" id="player-timer">—</div>
+        <div class="hud-center">
+          <div class="hud-label" id="player-q-prog">Pergunta 1</div>
+          <div class="hud-bar"><div class="hud-bar-fill" id="player-q-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="q-textbox" style="flex-shrink:0;"><h2 id="player-q-text">—</h2></div>
+      <div class="player-ans-grid" id="player-ans-grid"></div>
+      <div class="player-sent" id="player-sent" style="display:none;">
+        <div style="font-size:36px;">✓</div>
+        <div style="font-size:15px;font-weight:700;color:var(--c-gold2);">Resposta enviada!</div>
+        <div style="font-size:13px;color:var(--c-muted);">Aguardando os demais...</div>
+        <div class="wait-spinner" style="margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER FEEDBACK -->
+  <div class="screen" id="screen-feedback">
+    <div class="fb-body">
+      <div class="fb-icon-ring" id="fb-ring"></div>
+      <div style="font-size:28px;font-weight:900;" id="fb-title">—</div>
+      <div style="font-size:13px;color:var(--c-muted);" id="fb-sub">—</div>
+      <div class="fb-pts-card"><div style="font-size:12px;color:var(--c-muted);">Pontos ganhos</div><div style="font-size:30px;font-weight:900;color:var(--c-gold2);" id="fb-pts">+0</div></div>
+      <div style="font-size:13px;color:var(--c-muted);">Total: <span id="fb-total" style="color:var(--c-gold2);font-weight:700;font-family:var(--f-mono);">0</span> pts</div>
+    </div>
+  </div>
+
+  <!-- PLAYER PODIUM -->
+  <div class="screen" id="screen-pplayer">
+    <div class="pplayer-body">
+      <div style="font-size:56px;" id="pp-icon">🎓</div>
+      <div style="font-size:24px;font-weight:900;color:var(--c-gold2);" id="pp-msg">Bom jogo!</div>
+      <div class="pplayer-rank-card">
+        <div style="font-size:10px;color:var(--c-muted);letter-spacing:2px;">SUA COLOCAÇÃO</div>
+        <div style="font-size:44px;font-weight:900;color:var(--c-gold2);font-family:var(--f-mono);" id="pp-rank">—</div>
+        <div style="font-size:10px;color:var(--c-muted);letter-spacing:2px;margin-top:6px;">PONTUAÇÃO</div>
+        <div style="font-size:28px;font-weight:800;font-family:var(--f-mono);" id="pp-score">0</div>
+      </div>
+      <button class="btn btn-gold" onclick="showScreen('join')">Jogar Novamente</button>
+    </div>
+  </div>
+
+  <!-- STUDY SELECT -->
+  <div class="screen" id="screen-study">
+    <div class="scroll">
+      <div class="pg-title">Modo Estudo Individual</div>
+      <div class="pg-sub">Estude no seu ritmo — a IA explica cada resposta</div>
+      <div class="lbl">ESCOLHA AS CATEGORIAS</div>
+      <div class="study-cats" id="study-cats"></div>
+      <div class="lbl" style="margin-top:8px;">CONFIGURAÇÕES</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div><div style="font-size:11px;color:var(--c-muted);margin-bottom:5px;">Quantidade</div>
+          <select class="inp" id="study-qty" style="width:130px;"><option value="5">5 perguntas</option><option value="10" selected>10 perguntas</option><option value="15">15 perguntas</option><option value="20">20 perguntas</option></select></div>
+        <div><div style="font-size:11px;color:var(--c-muted);margin-bottom:5px;">Tempo por pergunta</div>
+          <select class="inp" id="study-time" style="width:130px;"><option value="0">Sem limite</option><option value="20">20 segundos</option><option value="30" selected>30 segundos</option><option value="60">60 segundos</option></select></div>
+        <button class="btn btn-gold btn-lg" id="study-start-btn" onclick="startStudy()" disabled>Iniciar Estudo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDY QUESTION -->
+  <div class="screen" id="screen-study-q">
+    <div class="study-q-layout">
+      <div class="qhud">
+        <div class="timer-orb" id="study-timer">—</div>
+        <div class="hud-center">
+          <div class="hud-label" id="study-prog-lbl">Pergunta 1 de 10</div>
+          <div class="hud-bar"><div class="hud-bar-fill" id="study-prog-bar" style="width:10%"></div></div>
+        </div>
+        <div class="hud-right"><div class="hud-count" id="study-score-n">0</div><div class="hud-count-lbl">pontos</div></div>
+      </div>
+      <div class="q-textbox" style="flex-shrink:0;"><h2 id="study-q-text">—</h2></div>
+      <div class="ans-grid" id="study-ans-grid" style="flex:0;min-height:150px;"></div>
+      <div class="expl-box" id="study-expl" style="display:none;"><h4>✦ Explicação da IA</h4><p id="study-expl-text">Carregando...</p></div>
+      <div style="display:flex;justify-content:flex-end;flex-shrink:0;" id="study-next-row"><button class="btn btn-gold" onclick="nextStudyQ()">Próxima →</button></div>
+    </div>
+  </div>
+
+  <!-- STUDY FINAL -->
+  <div class="screen" id="screen-study-final">
+    <div class="study-final-body">
+      <div style="font-size:52px;" id="sf-icon">🎓</div>
+      <div style="font-size:22px;font-weight:800;color:var(--c-gold2);" id="sf-title">Sessão concluída!</div>
+      <div class="study-stat-row" id="sf-stats"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+        <button class="btn btn-outline" onclick="goStudy()">Estudar novamente</button>
+        <button class="btn btn-gold" onclick="goHome()">Início</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANCO -->
+  <div class="screen" id="screen-banco">
+    <div class="scroll">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <div><div class="pg-title">Banco de Questões</div><div class="pg-sub">Questões técnicas sobre Lei 14.133/2021</div></div>
+        <button class="btn btn-gold btn-sm" onclick="doBancoAI()">✨ Gerar com IA</button>
+      </div>
+      <div class="banco-filters" id="banco-filters"></div>
+      <div class="banco-items" id="banco-items"></div>
+    </div>
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div class="screen" id="screen-relatorio">
+    <div class="scroll">
+      <div class="rel-topbar">
+        <div><div class="pg-title">📊 Relatório da Sessão</div><div class="pg-sub" id="rel-info">—</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-gold btn-sm" onclick="downloadCSV()">📥 Baixar CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="showScreen('dash')">← Voltar</button>
+        </div>
+      </div>
+      <div class="rel-stats" id="rel-stats"></div>
+      <div class="lbl">DESEMPENHO POR PARTICIPANTE</div>
+      <div style="overflow-x:auto;"><table class="rel-table"><thead><tr><th>#</th><th>Participante</th><th>Pontuação</th><th>Acertos Est.</th><th>Barra</th></tr></thead><tbody id="rel-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- AI -->
+  <div class="screen" id="screen-ai">
+    <div class="ai-body">
+      <div style="font-size:44px;">✨</div>
+      <div style="font-size:20px;font-weight:800;color:var(--c-gold2);" id="ai-msg">Gerando com IA...</div>
+      <div style="font-size:13px;color:var(--c-muted);" id="ai-sub">Consultando Lei 14.133/2021</div>
+      <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
