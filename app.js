@@ -119,8 +119,12 @@ function pin6() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
 function goHome() { showScreen('home'); }
 
-function goHost() {
-  if (!APP.user) { showScreen('login'); return; }
+async function goHost() {
+  if (!APP.user) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await onSignedIn(session.user);
+    else { showScreen('login'); return; }
+  }
   showScreen('dash');
 }
 
@@ -199,7 +203,11 @@ async function doLogout() {
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════
 async function loadDash() {
-  if (!APP.user) return;
+  if (!APP.user) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await onSignedIn(session.user);
+    else { showScreen('login'); return; }
+  }
   const { data } = await sb.from('quizzes')
     .select('*').eq('owner_id', APP.user.id).order('created_at', { ascending: false });
   APP.quizzes = data || [];
@@ -237,7 +245,11 @@ function renderQuizGrid() {
 }
 
 async function createQuiz() {
-  if (!APP.user) { toast('Faça login primeiro', true); return; }
+  if (!APP.user) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await onSignedIn(session.user);
+    else { toast('Faça login primeiro', true); return; }
+  }
   const { data, error } = await sb.from('quizzes').insert({
     owner_id: APP.user.id, title: 'Novo Quiz — Lei 14.133/2021',
     description: '', icon: '📋', color: '#0F2040',
@@ -448,7 +460,11 @@ async function doGenerateAIQs() {
 }
 
 async function doGenerateAIQuiz() {
-  if (!APP.user) { toast('Faça login primeiro', true); return; }
+  if (!APP.user) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await onSignedIn(session.user);
+    else { toast('Faça login primeiro', true); return; }
+  }
   setAI('Gerando quiz completo...', 'Criando questões técnicas com IA');
   showScreen('ai');
   try {
@@ -484,7 +500,11 @@ async function doGenerateAIQuiz() {
 //  HOST GAME — Supabase Realtime
 // ═══════════════════════════════════════════════════════════
 async function hostGame(quizId) {
-  if (!APP.user) { toast('Faça login primeiro', true); return; }
+  if (!APP.user) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await onSignedIn(session.user);
+    else { toast('Faça login primeiro', true); return; }
+  }
   loader(true, 'Preparando sessão...');
 
   const { data: quiz } = await sb.from('quizzes').select('*').eq('id', quizId).single();
@@ -1075,4 +1095,10 @@ function checkUrlPin() {
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
-initAuth().then(checkUrlPin);
+// Aguarda auth completa antes de liberar a UI
+initAuth().then(() => {
+  checkUrlPin();
+  // Se já está na tela dash sem user, redireciona
+  const active = document.querySelector('.screen.active');
+  if (active && active.id === 'screen-dash' && !APP.user) showScreen('home');
+});
