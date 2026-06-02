@@ -7,15 +7,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, set, get, push, update, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBRs4dNP0ebz-aS3iKkFYVw2egIgFXkbzk",
-  authDomain: "licitaquiz-4ace0.firebaseapp.com",
-  databaseURL: "https://licitaquiz-4ace0-default-rtdb.firebaseio.com",
-  projectId: "licitaquiz-4ace0",
-  storageBucket: "licitaquiz-4ace0.firebasestorage.app",
-  messagingSenderId: "45953603948",
-  appId: "1:45953603948:web:4b300ae8f9638fec163b49"
-};
+// Configuração injetada via meta tags pelo Netlify
+function getFirebaseConfig() {
+  const getMeta = name => document.querySelector(`meta[name="${name}"]`)?.content || '';
+  return {
+    apiKey:            getMeta('fb-api-key'),
+    authDomain:        getMeta('fb-auth-domain'),
+    databaseURL:       getMeta('fb-database-url'),
+    projectId:         getMeta('fb-project-id'),
+    storageBucket:     getMeta('fb-storage-bucket'),
+    messagingSenderId: getMeta('fb-sender-id'),
+    appId:             getMeta('fb-app-id'),
+  };
+}
+const firebaseConfig = getFirebaseConfig();
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
