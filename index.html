@@ -8,7 +8,7 @@
 <title>LicitaQuiz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 :root {
   --c-bg:#070E1A; --c-bg2:#0D1B2E; --c-bg3:#132238;
@@ -385,7 +385,10 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
       <div class="auth-sub">Entre com sua conta para gerenciar quizzes e turmas</div>
       <div class="auth-fields">
         <input type="email" class="inp" id="login-email" placeholder="E-mail">
-        <input type="password" class="inp" id="login-pass" placeholder="Senha">
+        <div style="position:relative;">
+          <input type="password" class="inp" id="login-pass" placeholder="Senha" style="padding-right:44px;">
+          <button type="button" onclick="togglePass('login-pass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--c-muted);">👁️</button>
+        </div>
       </div>
       <button class="btn btn-gold btn-full" onclick="doLogin()">Entrar</button>
       <div class="auth-link">Ainda não tem conta? <a onclick="showScreen('signup')">Criar agora</a></div>
@@ -401,7 +404,10 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
       <div class="auth-fields">
         <input type="text" class="inp" id="su-name" placeholder="Nome completo">
         <input type="email" class="inp" id="su-email" placeholder="E-mail">
-        <input type="password" class="inp" id="su-pass" placeholder="Senha (mín. 6 caracteres)">
+        <div style="position:relative;">
+          <input type="password" class="inp" id="su-pass" placeholder="Senha (mín. 6 caracteres)" style="padding-right:44px;">
+          <button type="button" onclick="togglePass('su-pass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--c-muted);">👁️</button>
+        </div>
         <input type="text" class="inp" id="su-org" placeholder="Órgão / Instituição (opcional)">
         <input type="text" class="inp" id="su-oab" placeholder="Nº OAB (opcional)">
       </div>
@@ -688,6 +694,6 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
     </div>
   </div>
 </div>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
