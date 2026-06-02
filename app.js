@@ -128,6 +128,12 @@ async function goHost() {
   showScreen('dash');
 }
 
+function togglePass(id, btn) {
+  const inp = document.getElementById(id);
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
 function goStudy() {
   renderStudyCats();
   showScreen('study');
