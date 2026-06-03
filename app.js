@@ -1,246 +1,166 @@
 // ═══════════════════════════════════════════════════════════
-//  LICITAQUIZ — app.js (Firebase)
-//  Código 100% original — ILSP Soluções Ltda.
+//  LICITAQUIZ — app.js (Firebase Compat SDK)
+//  Sem ES modules — funciona direto no browser
 // ═══════════════════════════════════════════════════════════
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, set, get, push, update, onValue, off, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = {
+  apiKey:            document.querySelector('meta[name="fb-api-key"]')?.content,
+  authDomain:        document.querySelector('meta[name="fb-auth-domain"]')?.content,
+  databaseURL:       document.querySelector('meta[name="fb-database-url"]')?.content,
+  projectId:         document.querySelector('meta[name="fb-project-id"]')?.content,
+  storageBucket:     document.querySelector('meta[name="fb-storage-bucket"]')?.content,
+  messagingSenderId: document.querySelector('meta[name="fb-sender-id"]')?.content,
+  appId:             document.querySelector('meta[name="fb-app-id"]')?.content,
+};
 
-// Configuração injetada via meta tags pelo Netlify
-function getFirebaseConfig() {
-  const getMeta = name => document.querySelector(`meta[name="${name}"]`)?.content || '';
-  return {
-    apiKey:            getMeta('fb-api-key'),
-    authDomain:        getMeta('fb-auth-domain'),
-    databaseURL:       getMeta('fb-database-url'),
-    projectId:         getMeta('fb-project-id'),
-    storageBucket:     getMeta('fb-storage-bucket'),
-    messagingSenderId: getMeta('fb-sender-id'),
-    appId:             getMeta('fb-app-id'),
-  };
-}
-const firebaseConfig = getFirebaseConfig();
-
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const db   = getDatabase(firebaseApp);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
 
 // ═══════════════════════════════════════════════════════════
-//  BANCO DE QUESTÕES (30 questões)
+//  BANCO DE QUESTÕES
 // ═══════════════════════════════════════════════════════════
 const BANCO = [
   {id:'b01',cat:'Modalidades',q:'Qual modalidade da Lei 14.133/2021 substitui a Tomada de Preços e a Concorrência da Lei 8.666/93?',opts:['Pregão','Concorrência','Diálogo Competitivo','Leilão'],c:1,ref:'Art. 28, I'},
-  {id:'b02',cat:'Modalidades',q:'O Pregão na Lei 14.133/2021 se destina exclusivamente à aquisição de:',opts:['Obras de engenharia','Bens e serviços comuns','Serviços técnicos especializados','Alienação de bens imóveis'],c:1,ref:'Art. 28, II c/c Art. 6º, XLI'},
+  {id:'b02',cat:'Modalidades',q:'O Pregão na Lei 14.133/2021 se destina exclusivamente à aquisição de:',opts:['Obras de engenharia','Bens e serviços comuns','Serviços técnicos especializados','Alienação de bens imóveis'],c:1,ref:'Art. 28, II'},
   {id:'b03',cat:'Modalidades',q:'O Diálogo Competitivo é cabível quando a Administração não consegue:',opts:['Obter propostas com preço inferior ao estimado','Definir o meio técnico adequado à satisfação da necessidade','Encontrar fornecedores habilitados','Superar o limite de dispensa'],c:1,ref:'Art. 32'},
   {id:'b04',cat:'Modalidades',q:'Qual modalidade é destinada à escolha de trabalho técnico, científico ou artístico com premiação?',opts:['Leilão','Concurso','Pregão','Concorrência'],c:1,ref:'Art. 30'},
   {id:'b05',cat:'Prazos',q:'Qual o prazo mínimo de publicação do edital de Pregão Eletrônico?',opts:['3 dias úteis','8 dias úteis','5 dias úteis','10 dias úteis'],c:1,ref:'Art. 55, II'},
-  {id:'b06',cat:'Prazos',q:'O prazo máximo de vigência de contratos de serviços contínuos na Lei 14.133/2021 é:',opts:['60 meses','5 anos prorrogáveis até 10 anos','12 meses renováveis indefinidamente','Indeterminado'],c:1,ref:'Art. 106, §1º'},
-  {id:'b07',cat:'Prazos',q:'A intenção de recurso no Pregão deve ser manifestada:',opts:['Em até 3 dias úteis após a sessão','Imediatamente após declaração do vencedor, com motivação','Em 5 dias corridos da adjudicação','A qualquer momento antes da homologação'],c:1,ref:'Art. 44, §1º'},
+  {id:'b06',cat:'Prazos',q:'O prazo máximo de vigência de contratos de serviços contínuos na Lei 14.133/2021 é:',opts:['60 meses','5 anos prorrogáveis até 10 anos','12 meses renováveis','Indeterminado'],c:1,ref:'Art. 106, §1º'},
+  {id:'b07',cat:'Prazos',q:'A intenção de recurso no Pregão deve ser manifestada:',opts:['Em até 3 dias úteis após a sessão','Imediatamente após declaração do vencedor','Em 5 dias corridos da adjudicação','A qualquer momento antes da homologação'],c:1,ref:'Art. 44, §1º'},
   {id:'b08',cat:'Contratos',q:'O limite geral para acréscimos ou supressões unilaterais em contratos é de:',opts:['10%','15%','25%','50%'],c:2,ref:'Art. 125, §1º'},
-  {id:'b09',cat:'Contratos',q:'Em reformas de edifícios ou equipamentos, o limite de acréscimo por alteração unilateral é de:',opts:['25%','30%','40%','50%'],c:3,ref:'Art. 125, §2º'},
+  {id:'b09',cat:'Contratos',q:'Em reformas de edifícios ou equipamentos, o limite de acréscimo unilateral é de:',opts:['25%','30%','40%','50%'],c:3,ref:'Art. 125, §2º'},
   {id:'b10',cat:'Contratos',q:'A garantia contratual ordinária na Lei 14.133/2021 pode ser de até:',opts:['3% do valor','5% do valor','10% do valor','15% do valor'],c:1,ref:'Art. 96, §1º'},
   {id:'b11',cat:'Dispensa',q:'Qual é o limite de dispensa de licitação para obras de baixa complexidade?',opts:['R$ 50.000','R$ 100.000','R$ 200.000','R$ 500.000'],c:1,ref:'Art. 75, I'},
   {id:'b12',cat:'Dispensa',q:'O limite de dispensa para compras e serviços comuns é de:',opts:['R$ 50.000','R$ 100.000','R$ 150.000','R$ 200.000'],c:1,ref:'Art. 75, II'},
   {id:'b13',cat:'Dispensa',q:'A inexigibilidade de licitação ocorre quando há:',opts:['Urgência de contratação','Inviabilidade de competição','Valor inferior ao limite legal','Fornecedor único no Brasil'],c:1,ref:'Art. 74'},
   {id:'b14',cat:'Habilitação',q:'No Pregão Eletrônico, a habilitação é verificada:',opts:['Antes da fase de lances','Após a fase de lances, apenas do provável vencedor','Para todos simultaneamente','Somente após a adjudicação'],c:1,ref:'Art. 17, §1º'},
-  {id:'b15',cat:'Habilitação',q:'A qualificação técnico-operacional exige comprovação de experiência prévia de, no mínimo:',opts:['25% do objeto','50% do objeto','75% do objeto','100% do objeto'],c:1,ref:'Art. 67, II'},
+  {id:'b15',cat:'Habilitação',q:'A qualificação técnico-operacional exige comprovação de experiência de, no mínimo:',opts:['25% do objeto','50% do objeto','75% do objeto','100% do objeto'],c:1,ref:'Art. 67, II'},
   {id:'b16',cat:'Princípios',q:'O princípio da segregação de funções determina que:',opts:['Áreas distintas façam licitações separadas','A mesma pessoa não realize e verifique sua própria tarefa','O pregoeiro não seja fiscal','O ordenador não assine contratos'],c:1,ref:'Art. 7º'},
-  {id:'b17',cat:'Princípios',q:'Qual princípio impõe que os atos administrativos licitatórios sejam sempre fundamentados?',opts:['Publicidade','Eficiência','Motivação','Impessoalidade'],c:2,ref:'Art. 5º'},
-  {id:'b18',cat:'Princípios',q:'O desenvolvimento nacional sustentável na NLLC abrange:',opts:['Apenas aspectos ambientais','Aspectos econômicos, sociais e ambientais','Preferência a fornecedores nacionais','Contratações somente no âmbito local'],c:1,ref:'Art. 11, IV'},
+  {id:'b17',cat:'Princípios',q:'Qual princípio impõe que os atos licitatórios sejam sempre fundamentados?',opts:['Publicidade','Eficiência','Motivação','Impessoalidade'],c:2,ref:'Art. 5º'},
+  {id:'b18',cat:'Princípios',q:'O desenvolvimento nacional sustentável na NLLC abrange:',opts:['Apenas aspectos ambientais','Aspectos econômicos, sociais e ambientais','Preferência a fornecedores nacionais','Contratações somente locais'],c:1,ref:'Art. 11, IV'},
   {id:'b19',cat:'Penalidades',q:'A sanção de impedimento de licitar e contratar tem duração máxima de:',opts:['1 ano','2 anos','3 anos','5 anos'],c:2,ref:'Art. 156, III'},
   {id:'b20',cat:'Penalidades',q:'A declaração de inidoneidade impede a empresa de licitar por:',opts:['1 a 3 anos','3 a 6 anos','5 a 10 anos','Prazo indeterminado'],c:1,ref:'Art. 156, IV'},
   {id:'b21',cat:'Penalidades',q:'A multa por inexecução total do contrato pode chegar a:',opts:['5%','10%','20%','30%'],c:3,ref:'Art. 162'},
-  {id:'b22',cat:'ME/EPP',q:'O empate ficto para ME/EPP permite preferência quando a diferença de preço é de até:',opts:['3%','5%','8%','10%'],c:1,ref:'LC 123/2006, Art. 44'},
+  {id:'b22',cat:'ME/EPP',q:'O empate ficto para ME/EPP permite preferência quando a diferença é de até:',opts:['3%','5%','8%','10%'],c:1,ref:'LC 123/2006, Art. 44'},
   {id:'b23',cat:'ME/EPP',q:'A cota reservada para ME/EPP em bens divisíveis pode ser de até:',opts:['10%','15%','25%','30%'],c:2,ref:'LC 123/2006, Art. 48, III'},
-  {id:'b24',cat:'Agentes',q:'O agente de contratação na NLLC substituiu qual figura da Lei 8.666/93?',opts:['Fiscal do contrato','Pregoeiro e comissão permanente de licitação','Gestor de contratos','Autoridade competente'],c:1,ref:'Art. 8º'},
-  {id:'b25',cat:'Planejamento',q:'O Estudo Técnico Preliminar (ETP) antecede obrigatoriamente:',opts:['A publicação do edital','A elaboração do Termo de Referência','A designação do agente de contratação','A fase de habilitação'],c:1,ref:'Art. 18, I'},
+  {id:'b24',cat:'Agentes',q:'O agente de contratação na NLLC substituiu qual figura da Lei 8.666/93?',opts:['Fiscal do contrato','Pregoeiro e comissão permanente','Gestor de contratos','Autoridade competente'],c:1,ref:'Art. 8º'},
+  {id:'b25',cat:'Planejamento',q:'O Estudo Técnico Preliminar (ETP) antecede obrigatoriamente:',opts:['A publicação do edital','A elaboração do Termo de Referência','A designação do agente','A fase de habilitação'],c:1,ref:'Art. 18, I'},
   {id:'b26',cat:'Planejamento',q:'O Plano de Contratações Anual (PCA) deve ser elaborado com antecedência de:',opts:['30 dias','60 dias','90 dias','180 dias'],c:1,ref:'Decreto 10.947/2022'},
   {id:'b27',cat:'Execução',q:'O fiscal do contrato é responsável por:',opts:['Assinar o contrato','Acompanhar e fiscalizar a execução','Elaborar o edital','Conduzir a habilitação'],c:1,ref:'Art. 117'},
-  {id:'b28',cat:'Execução',q:'A presunção de inexequibilidade em obras e serviços de engenharia ocorre abaixo de:',opts:['60% do orçamento','70% do orçamento','75% do orçamento','80% do orçamento'],c:2,ref:'Art. 59, §4º'},
+  {id:'b28',cat:'Execução',q:'A presunção de inexequibilidade em obras de engenharia ocorre abaixo de:',opts:['60%','70%','75%','80%'],c:2,ref:'Art. 59, §4º'},
   {id:'b29',cat:'Execução',q:'O recebimento definitivo de obras deve ocorrer em até quanto tempo após o provisório?',opts:['15 dias','30 dias','60 dias','90 dias'],c:3,ref:'Art. 140, II, a'},
-  {id:'b30',cat:'Contratos',q:'O reequilíbrio econômico-financeiro é cabível quando ocorrem:',opts:['Aumentos de preço superiores a 5%','Fatos imprevisíveis que alteram a equação econômica original','Variação cambial favorável ao contratado','Decisão da contratada de majorar lucro'],c:1,ref:'Art. 124, II, d'},
+  {id:'b30',cat:'Contratos',q:'O reequilíbrio econômico-financeiro é cabível quando ocorrem:',opts:['Aumentos de preço superiores a 5%','Fatos imprevisíveis que alteram a equação econômica','Variação cambial favorável ao contratado','Decisão de majorar lucro'],c:1,ref:'Art. 124, II, d'},
 ];
 
 const AVATARES = ['👨‍⚖️','👩‍⚖️','📚','⚖️','🏛️','📋','🔍','💼','🎓','📜','🖊️','🏅'];
-const ANS_COLS = [
-  {bg:'var(--c-ans-a)',l:'A'},
-  {bg:'var(--c-ans-b)',l:'B'},
-  {bg:'var(--c-ans-c)',l:'C'},
-  {bg:'var(--c-ans-d)',l:'D'},
-];
-const CAT_ICONS = {
-  Modalidades:'📋',Prazos:'⏱️',Contratos:'📄',Dispensa:'✅',
-  'Habilitação':'🔍','Princípios':'⚖️',Penalidades:'⚠️',
-  'ME/EPP':'🏪',Agentes:'👤',Planejamento:'📊',Execução:'🔧',
-};
+const ANS_COLS = [{bg:'var(--c-ans-a)',l:'A'},{bg:'var(--c-ans-b)',l:'B'},{bg:'var(--c-ans-c)',l:'C'},{bg:'var(--c-ans-d)',l:'D'}];
+const CAT_ICONS = {Modalidades:'📋',Prazos:'⏱️',Contratos:'📄',Dispensa:'✅','Habilitação':'🔍','Princípios':'⚖️',Penalidades:'⚠️','ME/EPP':'🏪',Agentes:'👤',Planejamento:'📊',Execução:'🔧'};
 
-// ═══════════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════════
 const APP = {
-  user: null,
-  quizzes: [],
-  editQuiz: null, editQIdx: 0,
-  gameSession: null, gameQuiz: null, gameQIdx: 0,
-  gamePlayers: {}, gameResponses: {},
-  gameTimer: null, gameTimeLeft: 0,
-  gameListeners: [],
-  lastReport: null,
-  playerInfo: null, playerScore: 0, playerResponses: [],
-  playerTimer: null, playerAnswered: false,
-  studyCats: [], studyQs: [], studyQIdx: 0,
-  studyScore: 0, studyCorrect: 0,
-  studyTimer: null, studyAnswered: false,
-  bancoFilter: 'Todos',
-  selAvatar: null,
+  user:null, quizzes:[],
+  editQuiz:null, editQIdx:0,
+  gamePin:null, gameQuiz:null, gameQIdx:0,
+  gamePlayers:{}, gameResponses:{},
+  gameTimer:null, gameTimeLeft:0,
+  gameListeners:[], lastReport:null,
+  playerInfo:null, playerScore:0, playerResponses:[],
+  playerTimer:null, playerAnswered:false,
+  studyCats:[], studyQs:[], studyQIdx:0,
+  studyScore:0, studyCorrect:0,
+  studyTimer:null, studyAnswered:false,
+  bancoFilter:'Todos', selAvatar:null,
 };
 
-// ═══════════════════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════════════════
+// ── UTILS ──────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const el = $('screen-' + id);
-  if (el) el.classList.add('active');
-  const navMap = {
-    'dash':'dash','edit':'dash','lobby':'dash','host-q':'dash',
-    'host-res':'dash','podium':'dash','relatorio':'dash',
-    'join':'aluno','nick':'aluno','wait':'aluno',
-    'player-q':'aluno','feedback':'aluno','pplayer':'aluno',
-    'study':'estudo','study-q':'estudo','study-final':'estudo',
-    'banco':'banco',
-  };
-  document.querySelectorAll('.hdr-nav-btn').forEach(b => b.classList.remove('on'));
-  const nb = $('nav-' + navMap[id]);
-  if (nb) nb.classList.add('on');
-  if (id === 'dash') loadDash();
-  if (id === 'banco') renderBanco();
+  const el = $('screen-'+id); if(el) el.classList.add('active');
+  const nav = {dash:'dash',edit:'dash',lobby:'dash','host-q':'dash','host-res':'dash',podium:'dash',relatorio:'dash',join:'aluno',nick:'aluno',wait:'aluno','player-q':'aluno',feedback:'aluno',pplayer:'aluno',study:'estudo','study-q':'estudo','study-final':'estudo',banco:'banco'};
+  document.querySelectorAll('.hdr-nav-btn').forEach(b=>b.classList.remove('on'));
+  const nb=$('nav-'+nav[id]); if(nb) nb.classList.add('on');
+  if(id==='dash') loadDash();
+  if(id==='banco') renderBanco();
 }
 
 function toast(msg, isErr) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.className = isErr ? 'err show' : 'show';
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('show'), 3200);
+  const t=$('toast'); t.textContent=msg;
+  t.className=isErr?'err show':'show';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200);
 }
 
-function loader(show, msg = 'Processando...') {
-  $('loader-msg').textContent = msg;
-  $('loader').classList.toggle('show', show);
+function loader(show, msg='Processando...') {
+  $('loader-msg').textContent=msg;
+  $('loader').classList.toggle('show',show);
 }
 
-function pin6() { return String(Math.floor(100000 + Math.random() * 900000)); }
-function goHome() { showScreen('home'); }
-function goHost() { APP.user ? showScreen('dash') : showScreen('login'); }
-function goStudy() { renderStudyCats(); showScreen('study'); }
+function pin6(){ return String(Math.floor(100000+Math.random()*900000)); }
+function goHome(){ showScreen('home'); }
+function goHost(){ APP.user ? showScreen('dash') : showScreen('login'); }
+function goStudy(){ renderStudyCats(); showScreen('study'); }
+function togglePass(id,btn){ const i=document.getElementById(id); i.type=i.type==='password'?'text':'password'; btn.textContent=i.type==='password'?'👁️':'🙈'; }
 
-function togglePass(id, btn) {
-  const inp = document.getElementById(id);
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
-}
-
-// ═══════════════════════════════════════════════════════════
-//  AUTH
-// ═══════════════════════════════════════════════════════════
-onAuthStateChanged(auth, user => {
-  APP.user = user;
-  updateHeader();
-});
+// ── AUTH ───────────────────────────────────────────────────
+auth.onAuthStateChanged(user => { APP.user=user; updateHeader(); });
 
 function updateHeader() {
-  const u = APP.user;
-  const n = u?.displayName || u?.email?.split('@')[0] || '';
-  $('hdr-user-name').textContent = u ? n : '';
-  $('hdr-avatar-btn').textContent = u ? (n[0] || '?').toUpperCase() : '👤';
+  const u=APP.user, n=u?.displayName||u?.email?.split('@')[0]||'';
+  $('hdr-user-name').textContent=u?n:'';
+  $('hdr-avatar-btn').textContent=u?(n[0]||'?').toUpperCase():'👤';
 }
 
-function handleAvatarClick() {
-  APP.user ? doLogout() : showScreen('login');
-}
+function handleAvatarClick(){ APP.user?doLogout():showScreen('login'); }
 
 async function doLogin() {
-  const email = $('login-email').value.trim();
-  const pass  = $('login-pass').value;
-  if (!email || !pass) { toast('Preencha e-mail e senha', true); return; }
-  loader(true, 'Entrando...');
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    loader(false);
-    showScreen('dash');
-  } catch (e) {
-    loader(false);
-    toast('E-mail ou senha incorretos', true);
-  }
+  const email=$('login-email').value.trim(), pass=$('login-pass').value;
+  if(!email||!pass){toast('Preencha e-mail e senha',true);return;}
+  loader(true,'Entrando...');
+  try{ await auth.signInWithEmailAndPassword(email,pass); loader(false); showScreen('dash'); }
+  catch(e){ loader(false); toast('E-mail ou senha incorretos',true); }
 }
 
 async function doSignup() {
-  const name  = $('su-name').value.trim();
-  const email = $('su-email').value.trim();
-  const pass  = $('su-pass').value;
-  const org   = $('su-org').value.trim();
-  const oab   = $('su-oab').value.trim();
-  if (!name || !email || !pass) { toast('Preencha nome, e-mail e senha', true); return; }
-  if (pass.length < 6) { toast('Senha mínima: 6 caracteres', true); return; }
-  loader(true, 'Criando conta...');
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    await set(ref(db, 'profiles/' + cred.user.uid), {
-      full_name: name, email, organization: org, oab, created_at: Date.now(),
-    });
+  const name=$('su-name').value.trim(), email=$('su-email').value.trim();
+  const pass=$('su-pass').value, org=$('su-org').value.trim(), oab=$('su-oab').value.trim();
+  if(!name||!email||!pass){toast('Preencha nome, e-mail e senha',true);return;}
+  if(pass.length<6){toast('Senha mínima: 6 caracteres',true);return;}
+  loader(true,'Criando conta...');
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,pass);
+    await db.ref('profiles/'+cred.user.uid).set({full_name:name,email,organization:org,oab,created_at:Date.now()});
+    loader(false); toast('Conta criada!'); showScreen('dash');
+  } catch(e){
     loader(false);
-    toast('Conta criada com sucesso!');
-    showScreen('dash');
-  } catch (e) {
-    loader(false);
-    const msg = e.code === 'auth/email-already-in-use' ? 'E-mail já cadastrado' : e.message;
-    toast(msg, true);
+    toast(e.code==='auth/email-already-in-use'?'E-mail já cadastrado':e.message,true);
   }
 }
 
-async function doLogout() {
-  await signOut(auth);
-  APP.user = null;
-  updateHeader();
-  goHome();
-}
+async function doLogout(){ await auth.signOut(); APP.user=null; updateHeader(); goHome(); }
 
-// ═══════════════════════════════════════════════════════════
-//  DASHBOARD
-// ═══════════════════════════════════════════════════════════
+// ── DASHBOARD ──────────────────────────────────────────────
 async function loadDash() {
-  if (!APP.user) { showScreen('login'); return; }
-  loader(true, 'Carregando...');
-  const snap = await get(ref(db, 'quizzes/' + APP.user.uid));
-  APP.quizzes = [];
-  if (snap.exists()) {
-    snap.forEach(child => APP.quizzes.push({ id: child.key, ...child.val() }));
-    APP.quizzes.reverse();
-  }
-  loader(false);
-  renderQuizGrid();
+  if(!APP.user){showScreen('login');return;}
+  loader(true,'Carregando...');
+  const snap=await db.ref('quizzes/'+APP.user.uid).once('value');
+  APP.quizzes=[];
+  if(snap.exists()) snap.forEach(c=>APP.quizzes.unshift({id:c.key,...c.val()}));
+  loader(false); renderQuizGrid();
 }
 
 function renderQuizGrid() {
-  const g = $('quiz-grid');
-  if (!g) return;
-  if (!APP.quizzes.length) {
-    g.innerHTML = '<div style="color:var(--c-muted);text-align:center;padding:40px;grid-column:1/-1;">Nenhum quiz ainda. Crie o primeiro! 👆</div>';
-    return;
-  }
-  g.innerHTML = APP.quizzes.map(q => `
+  const g=$('quiz-grid'); if(!g) return;
+  if(!APP.quizzes.length){g.innerHTML='<div style="color:var(--c-muted);text-align:center;padding:40px;grid-column:1/-1;">Nenhum quiz ainda. Crie o primeiro! 👆</div>';return;}
+  g.innerHTML=APP.quizzes.map(q=>`
     <div class="qcard">
-      <div class="qcard-thumb" style="background:${q.color || '#0F2040'}">
-        <span>${q.icon || '📋'}</span>
-        <span class="qcard-cnt">${(q.questions ? Object.keys(q.questions).length : 0)}Q</span>
+      <div class="qcard-thumb" style="background:${q.color||'#0F2040'}">
+        <span>${q.icon||'📋'}</span>
+        <span class="qcard-cnt">${q.questions?Object.keys(q.questions).length:0}Q</span>
       </div>
       <div class="qcard-body">
         <div class="qcard-title">${q.title}</div>
-        <div class="qcard-desc">${q.description || 'Sem descrição'}</div>
+        <div class="qcard-desc">${q.description||'Sem descrição'}</div>
         <div class="qcard-btns">
           <button class="btn btn-gold btn-sm" onclick="hostGame('${q.id}')">▶ Jogar</button>
           <button class="btn btn-ghost btn-sm" onclick="editQuiz('${q.id}')">✏️</button>
@@ -251,693 +171,503 @@ function renderQuizGrid() {
 }
 
 async function createQuiz() {
-  if (!APP.user) { showScreen('login'); return; }
-  const newRef = push(ref(db, 'quizzes/' + APP.user.uid));
-  const quiz = { title: 'Novo Quiz — Lei 14.133/2021', description: '', icon: '📋', color: '#0F2040', created_at: Date.now() };
-  await set(newRef, quiz);
-  APP.quizzes.unshift({ id: newRef.key, ...quiz });
+  if(!APP.user){showScreen('login');return;}
+  const newRef=db.ref('quizzes/'+APP.user.uid).push();
+  const quiz={title:'Novo Quiz — Lei 14.133/2021',description:'',icon:'📋',color:'#0F2040',created_at:Date.now()};
+  await newRef.set(quiz);
+  APP.quizzes.unshift({id:newRef.key,...quiz});
   await editQuiz(newRef.key);
 }
 
 async function deleteQuiz(id) {
-  if (!confirm('Excluir este quiz permanentemente?')) return;
-  await remove(ref(db, 'quizzes/' + APP.user.uid + '/' + id));
-  APP.quizzes = APP.quizzes.filter(q => q.id !== id);
-  renderQuizGrid();
-  toast('Quiz excluído.');
+  if(!confirm('Excluir este quiz?')) return;
+  await db.ref('quizzes/'+APP.user.uid+'/'+id).remove();
+  APP.quizzes=APP.quizzes.filter(q=>q.id!==id);
+  renderQuizGrid(); toast('Quiz excluído.');
 }
 
-// ═══════════════════════════════════════════════════════════
-//  EDIT QUIZ
-// ═══════════════════════════════════════════════════════════
+// ── EDIT ───────────────────────────────────────────────────
 async function editQuiz(id) {
-  loader(true, 'Carregando quiz...');
-  const snap = await get(ref(db, 'quizzes/' + APP.user.uid + '/' + id));
-  const quiz = { id, ...snap.val() };
-  const questions = [];
-  if (quiz.questions) {
-    Object.entries(quiz.questions).forEach(([qid, q]) => {
-      const opts = q.opts ? Object.entries(q.opts).map(([,o]) => o) : [];
-      questions.push({ id: qid, ...q, opts });
+  loader(true,'Carregando quiz...');
+  const snap=await db.ref('quizzes/'+APP.user.uid+'/'+id).once('value');
+  const quiz={id,...snap.val()};
+  const questions=[];
+  if(quiz.questions){
+    Object.entries(quiz.questions).forEach(([qid,q])=>{
+      const opts=q.opts?Object.values(q.opts):[];
+      questions.push({id:qid,...q,opts});
     });
-    questions.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    questions.sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   }
-  APP.editQuiz = { ...quiz, questions };
-  APP.editQIdx = 0;
-  $('edit-quiz-title').value = quiz.title;
+  APP.editQuiz={...quiz,questions}; APP.editQIdx=0;
+  $('edit-quiz-title').value=quiz.title;
   renderEditSidebar();
-  if (questions.length) renderEditMain(0);
-  else $('edit-main').innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--c-muted);">Adicione uma pergunta para começar</div>';
-  loader(false);
-  showScreen('edit');
+  if(questions.length) renderEditMain(0);
+  else $('edit-main').innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--c-muted);">Adicione uma pergunta</div>';
+  loader(false); showScreen('edit');
 }
 
 function renderEditSidebar() {
-  const list = $('edit-qlist');
-  if (!list) return;
-  list.innerHTML = (APP.editQuiz.questions || []).map((q, i) => `
-    <div class="edit-qitem ${i === APP.editQIdx ? 'active' : ''}" onclick="selectQ(${i})">
-      <div class="edit-qitem-lbl">PERGUNTA ${i + 1}</div>
-      <div class="edit-qitem-text">${q.text || '(sem texto)'}</div>
+  const list=$('edit-qlist'); if(!list) return;
+  list.innerHTML=(APP.editQuiz.questions||[]).map((q,i)=>`
+    <div class="edit-qitem ${i===APP.editQIdx?'active':''}" onclick="selectQ(${i})">
+      <div class="edit-qitem-lbl">PERGUNTA ${i+1}</div>
+      <div class="edit-qitem-text">${q.text||'(sem texto)'}</div>
     </div>`).join('');
 }
 
-function selectQ(i) { syncCurrentQ(); APP.editQIdx = i; renderEditSidebar(); renderEditMain(i); }
+function selectQ(i){ syncCurrentQ(); APP.editQIdx=i; renderEditSidebar(); renderEditMain(i); }
 
 function syncCurrentQ() {
-  const q = APP.editQuiz.questions[APP.editQIdx];
-  if (!q) return;
-  const ta = $('qedit-text'); if (ta) q.text = ta.value;
-  const ts = $('qedit-time'); if (ts) q.time_limit = parseInt(ts.value) || 20;
-  document.querySelectorAll('.opt-inp').forEach((el, j) => { if (q.opts[j]) q.opts[j].text = el.value; });
+  const q=APP.editQuiz.questions[APP.editQIdx]; if(!q) return;
+  const ta=$('qedit-text'); if(ta) q.text=ta.value;
+  const ts=$('qedit-time'); if(ts) q.time_limit=parseInt(ts.value)||20;
+  document.querySelectorAll('.opt-inp').forEach((el,j)=>{if(q.opts[j]) q.opts[j].text=el.value;});
 }
 
 function renderEditMain(i) {
-  const q = APP.editQuiz.questions[i];
-  if (!q) return;
-  while (q.opts.length < 4) q.opts.push({ text: '', is_correct: false });
-  $('edit-main').innerHTML = `
-    <div>
-      <div class="lbl">TEXTO DA PERGUNTA</div>
-      <textarea class="inp" id="qedit-text" placeholder="Digite a pergunta...">${q.text || ''}</textarea>
-    </div>
-    <div>
-      <div class="lbl">ALTERNATIVAS — marque a correta (✓)</div>
-      <div class="opts-grid">
-        ${q.opts.map((o, j) => `
-          <div class="opt-row">
-            <div class="opt-letter" style="background:${ANS_COLS[j].bg}">${ANS_COLS[j].l}</div>
-            <input type="text" class="opt-inp" placeholder="Alternativa ${j+1}" value="${o.text || ''}">
-            <button class="opt-check ${o.is_correct ? 'on' : ''}" onclick="toggleCorrect(${j})">✓</button>
-          </div>`).join('')}
-      </div>
-    </div>
+  const q=APP.editQuiz.questions[i]; if(!q) return;
+  while(q.opts.length<4) q.opts.push({text:'',is_correct:false});
+  $('edit-main').innerHTML=`
+    <div><div class="lbl">TEXTO DA PERGUNTA</div>
+      <textarea class="inp" id="qedit-text" placeholder="Digite a pergunta...">${q.text||''}</textarea></div>
+    <div><div class="lbl">ALTERNATIVAS — marque a correta (✓)</div>
+      <div class="opts-grid">${q.opts.map((o,j)=>`
+        <div class="opt-row">
+          <div class="opt-letter" style="background:${ANS_COLS[j].bg}">${ANS_COLS[j].l}</div>
+          <input type="text" class="opt-inp" placeholder="Alternativa ${j+1}" value="${o.text||''}">
+          <button class="opt-check ${o.is_correct?'on':''}" onclick="toggleCorrect(${j})">✓</button>
+        </div>`).join('')}</div></div>
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-      <div>
-        <div class="lbl">TEMPO</div>
+      <div><div class="lbl">TEMPO</div>
         <select class="inp" id="qedit-time" style="width:120px;">
-          ${[10,15,20,30,45,60].map(t => `<option value="${t}" ${(q.time_limit||20)===t?'selected':''}>${t}s</option>`).join('')}
-        </select>
-      </div>
+          ${[10,15,20,30,45,60].map(t=>`<option value="${t}" ${(q.time_limit||20)===t?'selected':''}>${t}s</option>`).join('')}
+        </select></div>
       <button class="btn btn-outline btn-sm" onclick="aiSuggestQ()">✨ Sugerir com IA</button>
       <button class="btn btn-danger btn-sm" onclick="removeQ(${i})">🗑️ Remover</button>
     </div>`;
 }
 
 function toggleCorrect(j) {
-  const q = APP.editQuiz.questions[APP.editQIdx];
-  q.opts.forEach((o, k) => o.is_correct = (k === j));
-  document.querySelectorAll('.opt-check').forEach((b, k) => b.classList.toggle('on', k === j));
+  const q=APP.editQuiz.questions[APP.editQIdx];
+  q.opts.forEach((o,k)=>o.is_correct=(k===j));
+  document.querySelectorAll('.opt-check').forEach((b,k)=>b.classList.toggle('on',k===j));
 }
 
 function addQuestion() {
   syncCurrentQ();
-  APP.editQuiz.questions.push({ id: null, text: '', time_limit: 20, sort_order: APP.editQuiz.questions.length, opts: [{text:'',is_correct:true},{text:'',is_correct:false},{text:'',is_correct:false},{text:'',is_correct:false}] });
-  APP.editQIdx = APP.editQuiz.questions.length - 1;
+  APP.editQuiz.questions.push({id:null,text:'',time_limit:20,sort_order:APP.editQuiz.questions.length,opts:[{text:'',is_correct:true},{text:'',is_correct:false},{text:'',is_correct:false},{text:'',is_correct:false}]});
+  APP.editQIdx=APP.editQuiz.questions.length-1;
   renderEditSidebar(); renderEditMain(APP.editQIdx);
 }
 
 function removeQ(i) {
-  if (APP.editQuiz.questions.length <= 1) { toast('Mínimo 1 pergunta', true); return; }
-  if (!confirm('Remover esta pergunta?')) return;
-  APP.editQuiz.questions.splice(i, 1);
-  APP.editQIdx = Math.max(0, i - 1);
+  if(APP.editQuiz.questions.length<=1){toast('Mínimo 1 pergunta',true);return;}
+  if(!confirm('Remover?')) return;
+  APP.editQuiz.questions.splice(i,1);
+  APP.editQIdx=Math.max(0,i-1);
   renderEditSidebar(); renderEditMain(APP.editQIdx);
 }
 
 async function saveQuiz() {
   syncCurrentQ();
-  const title = $('edit-quiz-title').value.trim();
-  if (!title) { toast('Adicione um título', true); return false; }
-  APP.editQuiz.title = title;
-  loader(true, 'Salvando...');
-  const questionsObj = {};
-  APP.editQuiz.questions.forEach((q, i) => {
-    const qid = q.id || push(ref(db)).key;
-    q.id = qid;
-    questionsObj[qid] = { text: q.text, time_limit: q.time_limit || 20, sort_order: i, opts: q.opts };
+  const title=$('edit-quiz-title').value.trim();
+  if(!title){toast('Adicione um título',true);return false;}
+  APP.editQuiz.title=title;
+  loader(true,'Salvando...');
+  const qObj={};
+  APP.editQuiz.questions.forEach((q,i)=>{
+    const qid=q.id||db.ref().push().key; q.id=qid;
+    qObj[qid]={text:q.text,time_limit:q.time_limit||20,sort_order:i,opts:q.opts};
   });
-  await set(ref(db, 'quizzes/' + APP.user.uid + '/' + APP.editQuiz.id), {
-    title, description: APP.editQuiz.description || '', icon: APP.editQuiz.icon || '📋',
-    color: APP.editQuiz.color || '#0F2040', created_at: APP.editQuiz.created_at || Date.now(),
-    questions: questionsObj,
+  await db.ref('quizzes/'+APP.user.uid+'/'+APP.editQuiz.id).set({
+    title,description:APP.editQuiz.description||'',icon:APP.editQuiz.icon||'📋',
+    color:APP.editQuiz.color||'#0F2040',created_at:APP.editQuiz.created_at||Date.now(),questions:qObj,
   });
   loader(false); toast('Quiz salvo!'); return true;
 }
 
-async function saveAndBack() { if (await saveQuiz()) showScreen('dash'); }
-async function saveAndPlay() { if (await saveQuiz()) hostGame(APP.editQuiz.id); }
+async function saveAndBack(){ if(await saveQuiz()) showScreen('dash'); }
+async function saveAndPlay(){ if(await saveQuiz()) hostGame(APP.editQuiz.id); }
 
-// ═══════════════════════════════════════════════════════════
-//  IA
-// ═══════════════════════════════════════════════════════════
+// ── IA ─────────────────────────────────────────────────────
 async function callClaude(prompt) {
-  const r = await fetch('/.netlify/functions/claude', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
-  });
-  const d = await r.json();
-  if (d.error) throw new Error(d.error);
-  return d.text;
+  const r=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+  const d=await r.json(); if(d.error) throw new Error(d.error); return d.text;
 }
-
-function setAI(msg, sub) { $('ai-msg').textContent = msg; $('ai-sub').textContent = sub; }
+function setAI(msg,sub){$('ai-msg').textContent=msg;$('ai-sub').textContent=sub;}
 
 async function aiSuggestQ() {
-  syncCurrentQ(); const idx = APP.editQIdx;
-  setAI('Gerando pergunta...', 'Consultando Lei 14.133/2021'); showScreen('ai');
-  try {
-    const r = await callClaude(`Gere UMA pergunta técnica de múltipla escolha sobre licitações (Lei 14.133/2021). Responda APENAS com JSON sem markdown:\n{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"CORRETA","is_correct":true},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false}]}\nSeja tecnicamente preciso.`);
-    const p = JSON.parse(r.replace(/```json|```/g,'').trim());
-    APP.editQuiz.questions[idx] = { ...APP.editQuiz.questions[idx], ...p };
+  syncCurrentQ(); const idx=APP.editQIdx;
+  setAI('Gerando pergunta...','Consultando Lei 14.133/2021'); showScreen('ai');
+  try{
+    const r=await callClaude('Gere UMA pergunta técnica de múltipla escolha sobre licitações (Lei 14.133/2021). Responda APENAS com JSON sem markdown:\n{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"CORRETA","is_correct":true},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false}]}');
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
+    APP.editQuiz.questions[idx]={...APP.editQuiz.questions[idx],...p};
     showScreen('edit'); renderEditSidebar(); renderEditMain(idx); toast('Pergunta gerada!');
-  } catch(e) { showScreen('edit'); toast('Erro ao gerar', true); }
+  }catch(e){showScreen('edit');toast('Erro ao gerar',true);}
 }
 
 async function doGenerateAIQs() {
-  syncCurrentQ(); setAI('Gerando 5 perguntas...', 'Aguarde...'); showScreen('ai');
-  try {
-    const r = await callClaude(`Crie 5 perguntas técnicas de múltipla escolha sobre licitações (Lei 14.133/2021). Responda APENAS com JSON sem markdown:\n{"qs":[{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"A","is_correct":true},{"text":"B","is_correct":false},{"text":"C","is_correct":false},{"text":"D","is_correct":false}]}]}\nVarie os temas: modalidades, contratos, penalidades, habilitação.`);
-    const p = JSON.parse(r.replace(/```json|```/g,'').trim());
-    const newQs = p.qs.map((q,i) => ({ id:null, sort_order: APP.editQuiz.questions.length+i, ...q }));
-    APP.editQuiz.questions.push(...newQs);
-    showScreen('edit'); renderEditSidebar(); renderEditMain(APP.editQIdx);
-    toast(`${newQs.length} perguntas adicionadas!`);
-  } catch(e) { showScreen('edit'); toast('Erro ao gerar', true); }
+  syncCurrentQ(); setAI('Gerando 5 perguntas...','Aguarde...'); showScreen('ai');
+  try{
+    const r=await callClaude('Crie 5 perguntas técnicas sobre licitações (Lei 14.133/2021). APENAS JSON:\n{"qs":[{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"A","is_correct":true},{"text":"B","is_correct":false},{"text":"C","is_correct":false},{"text":"D","is_correct":false}]}]}');
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
+    p.qs.forEach((q,i)=>APP.editQuiz.questions.push({id:null,sort_order:APP.editQuiz.questions.length+i,...q}));
+    showScreen('edit'); renderEditSidebar(); renderEditMain(APP.editQIdx); toast(p.qs.length+' perguntas adicionadas!');
+  }catch(e){showScreen('edit');toast('Erro ao gerar',true);}
 }
 
 async function doGenerateAIQuiz() {
-  if (!APP.user) { showScreen('login'); return; }
-  setAI('Gerando quiz completo...', 'Criando questões técnicas com IA'); showScreen('ai');
-  try {
-    const r = await callClaude(`Crie um quiz de 6 perguntas sobre licitações (Lei 14.133/2021). Responda APENAS com JSON sem markdown:\n{"title":"TÍTULO","description":"DESCRIÇÃO","icon":"EMOJI","qs":[{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"CORRETA","is_correct":true},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false}]}]}`);
-    const p = JSON.parse(r.replace(/```json|```/g,'').trim());
-    const newRef = push(ref(db, 'quizzes/' + APP.user.uid));
-    const questionsObj = {};
-    p.qs.forEach((q,i) => {
-      const qid = push(ref(db)).key;
-      questionsObj[qid] = { text:q.text, time_limit:q.time_limit||20, sort_order:i, opts:q.opts };
-    });
-    await set(newRef, { title:p.title, description:p.description, icon:p.icon||'✨', color:'#0F2040', created_at:Date.now(), questions:questionsObj });
+  if(!APP.user){showScreen('login');return;}
+  setAI('Gerando quiz completo...','Criando questões técnicas'); showScreen('ai');
+  try{
+    const r=await callClaude('Crie um quiz de 6 perguntas sobre licitações (Lei 14.133/2021). APENAS JSON:\n{"title":"TÍTULO","description":"DESCRIÇÃO","icon":"EMOJI","qs":[{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"CORRETA","is_correct":true},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false}]}]}');
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
+    const newRef=db.ref('quizzes/'+APP.user.uid).push();
+    const qObj={};
+    p.qs.forEach((q,i)=>{const qid=db.ref().push().key;qObj[qid]={text:q.text,time_limit:q.time_limit||20,sort_order:i,opts:q.opts};});
+    await newRef.set({title:p.title,description:p.description,icon:p.icon||'✨',color:'#0F2040',created_at:Date.now(),questions:qObj});
     await loadDash(); showScreen('dash'); toast('Quiz gerado pela IA! ✨');
-  } catch(e) { showScreen('dash'); toast('Erro ao gerar quiz', true); }
+  }catch(e){showScreen('dash');toast('Erro ao gerar',true);}
 }
 
-// ═══════════════════════════════════════════════════════════
-//  HOST GAME — Firebase Realtime
-// ═══════════════════════════════════════════════════════════
-function clearGameListeners() {
-  APP.gameListeners.forEach(({ r, fn }) => off(r, 'value', fn));
-  APP.gameListeners = [];
-}
+// ── HOST GAME ──────────────────────────────────────────────
+function clearGameListeners(){ APP.gameListeners.forEach(r=>r.off()); APP.gameListeners=[]; }
 
 async function hostGame(quizId) {
-  if (!APP.user) { showScreen('login'); return; }
-  loader(true, 'Preparando sessão...');
-  const snap = await get(ref(db, 'quizzes/' + APP.user.uid + '/' + quizId));
-  const quiz = { id: quizId, ...snap.val() };
-  const questions = [];
-  if (quiz.questions) {
-    Object.entries(quiz.questions).forEach(([qid, q]) => {
-      questions.push({ id: qid, ...q, opts: q.opts || [] });
-    });
-    questions.sort((a,b) => (a.sort_order||0)-(b.sort_order||0));
+  if(!APP.user){showScreen('login');return;}
+  loader(true,'Preparando sessão...');
+  const snap=await db.ref('quizzes/'+APP.user.uid+'/'+quizId).once('value');
+  const quiz={id:quizId,...snap.val()};
+  const questions=[];
+  if(quiz.questions){
+    Object.entries(quiz.questions).forEach(([qid,q])=>questions.push({id:qid,...q,opts:q.opts?Object.values(q.opts):[]}));
+    questions.sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   }
-  if (!questions.length) { loader(false); toast('Adicione perguntas ao quiz antes de jogar', true); return; }
-
-  const gamePin = pin6();
-  const sessionRef = ref(db, 'sessions/' + gamePin);
-  await set(sessionRef, {
-    quiz_id: quizId, host_id: APP.user.uid, pin: gamePin,
-    status: 'lobby', current_question_index: 0,
-    quiz_title: quiz.title, total_questions: questions.length,
+  if(!questions.length){loader(false);toast('Adicione perguntas antes de jogar',true);return;}
+  const gamePin=pin6();
+  await db.ref('sessions/'+gamePin).set({
+    quiz_id:quizId,host_id:APP.user.uid,pin:gamePin,
+    status:'lobby',current_question_index:0,
+    quiz_title:quiz.title,total_questions:questions.length,
   });
-
-  APP.gameSession = { pin: gamePin, quiz_id: quizId };
-  APP.gameQuiz = { ...quiz, questions };
-  APP.gameQIdx = 0; APP.gamePlayers = {}; APP.gameResponses = {};
+  APP.gamePin=gamePin; APP.gameQuiz={...quiz,questions};
+  APP.gameQIdx=0; APP.gamePlayers={}; APP.gameResponses={};
   clearGameListeners();
-
-  // Escuta novos jogadores
-  const playersRef = ref(db, 'sessions/' + gamePin + '/players');
-  const playersFn = snap => {
-    APP.gamePlayers = snap.val() || {};
-    renderLobbyPlayers();
-  };
-  onValue(playersRef, playersFn);
-  APP.gameListeners.push({ r: playersRef, fn: playersFn });
-
-  // Escuta respostas
-  const responsesRef = ref(db, 'sessions/' + gamePin + '/responses');
-  const responsesFn = snap => {
-    APP.gameResponses = snap.val() || {};
-    updateRespCount();
-    autoAdvance();
-  };
-  onValue(responsesRef, responsesFn);
-  APP.gameListeners.push({ r: responsesRef, fn: responsesFn });
-
-  const joinUrl = window.location.origin + window.location.pathname + '?pin=' + gamePin;
-  $('lobby-pin').textContent = gamePin;
-  $('lobby-hint-pin').textContent = gamePin;
-  $('lobby-quiz-name').textContent = quiz.title;
-  $('lobby-quiz-meta').textContent = questions.length + ' perguntas';
-  $('lobby-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(joinUrl)}`;
-  $('lobby-chips').innerHTML = '<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
-  $('lobby-cnt-lbl').textContent = 'PARTICIPANTES — 0';
+  const pRef=db.ref('sessions/'+gamePin+'/players');
+  pRef.on('value',snap=>{APP.gamePlayers=snap.val()||{};renderLobbyPlayers();});
+  APP.gameListeners.push(pRef);
+  const rRef=db.ref('sessions/'+gamePin+'/responses');
+  rRef.on('value',snap=>{APP.gameResponses=snap.val()||{};updateRespCount();autoAdvance();});
+  APP.gameListeners.push(rRef);
+  const joinUrl=window.location.origin+window.location.pathname+'?pin='+gamePin;
+  $('lobby-pin').textContent=gamePin; $('lobby-hint-pin').textContent=gamePin;
+  $('lobby-quiz-name').textContent=quiz.title;
+  $('lobby-quiz-meta').textContent=questions.length+' perguntas';
+  $('lobby-qr').src=`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(joinUrl)}`;
+  $('lobby-chips').innerHTML='<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
+  $('lobby-cnt-lbl').textContent='PARTICIPANTES — 0';
   loader(false); showScreen('lobby');
 }
 
 function renderLobbyPlayers() {
-  const chips = $('lobby-chips'); if (!chips) return;
-  const players = Object.values(APP.gamePlayers);
-  chips.innerHTML = players.length
-    ? players.map(p => `<div class="player-chip">${p.avatar||'🎓'} ${p.nickname}</div>`).join('')
-    : '<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
-  $('lobby-cnt-lbl').textContent = 'PARTICIPANTES — ' + players.length;
+  const chips=$('lobby-chips'); if(!chips) return;
+  const players=Object.values(APP.gamePlayers);
+  chips.innerHTML=players.length?players.map(p=>`<div class="player-chip">${p.avatar||'🎓'} ${p.nickname}</div>`).join(''):'<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
+  $('lobby-cnt-lbl').textContent='PARTICIPANTES — '+players.length;
 }
 
-function copyPin() { navigator.clipboard?.writeText(APP.gameSession?.pin||''); toast('Código copiado!'); }
-function sharePin() {
-  const pin = APP.gameSession?.pin||'';
-  const url = window.location.origin + window.location.pathname + '?pin=' + pin;
-  if (navigator.share) navigator.share({ title:'LicitaQuiz', text:`Entre com o código ${pin}`, url }).catch(()=>{});
-  else { navigator.clipboard?.writeText(url); toast('Link copiado!'); }
+function copyPin(){navigator.clipboard?.writeText(APP.gamePin||'');toast('Código copiado!');}
+function sharePin(){
+  const url=window.location.origin+window.location.pathname+'?pin='+(APP.gamePin||'');
+  if(navigator.share) navigator.share({title:'LicitaQuiz',text:'Entre com o código '+APP.gamePin,url}).catch(()=>{});
+  else{navigator.clipboard?.writeText(url);toast('Link copiado!');}
 }
 
-async function cancelLobby() {
+async function cancelLobby(){
   clearGameListeners();
-  if (APP.gameSession) await remove(ref(db, 'sessions/' + APP.gameSession.pin));
-  APP.gameSession = null; showScreen('dash');
+  if(APP.gamePin) await db.ref('sessions/'+APP.gamePin).remove();
+  APP.gamePin=null; showScreen('dash');
 }
 
-async function startGame() {
-  if (!Object.keys(APP.gamePlayers).length && !confirm('Nenhum aluno entrou. Iniciar mesmo assim?')) return;
-  APP.gameQIdx = 0; APP.gameResponses = {};
-  await update(ref(db, 'sessions/' + APP.gameSession.pin), {
-    status: 'active', current_question_index: 0, question_started_at: Date.now(),
-  });
+async function startGame(){
+  if(!Object.keys(APP.gamePlayers).length&&!confirm('Nenhum aluno entrou. Iniciar mesmo assim?')) return;
+  APP.gameQIdx=0; APP.gameResponses={};
+  await db.ref('sessions/'+APP.gamePin).update({status:'active',current_question_index:0,question_started_at:Date.now()});
   showHostQuestion(0);
 }
 
-function showHostQuestion(idx) {
-  APP.gameQIdx = idx; APP.gameResponses = {};
-  const q = APP.gameQuiz.questions[idx];
-  $('host-q-text').textContent = q.text;
-  $('host-q-prog').textContent = `Pergunta ${idx+1} de ${APP.gameQuiz.questions.length}`;
-  $('host-q-bar').style.width = ((idx+1)/APP.gameQuiz.questions.length*100)+'%';
-  $('host-resp-n').textContent = '0';
-  $('host-ans-grid').innerHTML = q.opts.map((o,i) => `
-    <div class="ans-btn ans-${'abcd'[i]}">
-      <div class="ans-letter">${ANS_COLS[i].l}</div>
-      <div class="ans-text">${o.text||o}</div>
-    </div>`).join('');
-  APP.gameTimeLeft = q.time_limit||20;
-  const orb = $('host-timer');
-  orb.textContent = APP.gameTimeLeft; orb.classList.remove('danger');
+function showHostQuestion(idx){
+  APP.gameQIdx=idx; APP.gameResponses={};
+  const q=APP.gameQuiz.questions[idx];
+  $('host-q-text').textContent=q.text;
+  $('host-q-prog').textContent=`Pergunta ${idx+1} de ${APP.gameQuiz.questions.length}`;
+  $('host-q-bar').style.width=((idx+1)/APP.gameQuiz.questions.length*100)+'%';
+  $('host-resp-n').textContent='0';
+  $('host-ans-grid').innerHTML=q.opts.map((o,i)=>`<div class="ans-btn ans-${'abcd'[i]}"><div class="ans-letter">${ANS_COLS[i].l}</div><div class="ans-text">${o.text||o}</div></div>`).join('');
+  APP.gameTimeLeft=q.time_limit||20;
+  const orb=$('host-timer'); orb.textContent=APP.gameTimeLeft; orb.classList.remove('danger');
   clearInterval(APP.gameTimer);
-  APP.gameTimer = setInterval(() => {
+  APP.gameTimer=setInterval(()=>{
     APP.gameTimeLeft--;
-    orb.textContent = APP.gameTimeLeft;
-    orb.classList.toggle('danger', APP.gameTimeLeft<=5);
-    if (APP.gameTimeLeft<=0) { clearInterval(APP.gameTimer); showHostResults(); }
-  }, 1000);
+    orb.textContent=APP.gameTimeLeft; orb.classList.toggle('danger',APP.gameTimeLeft<=5);
+    if(APP.gameTimeLeft<=0){clearInterval(APP.gameTimer);showHostResults();}
+  },1000);
   showScreen('host-q');
 }
 
-function updateRespCount() {
-  const el = $('host-resp-n');
-  if (el) el.textContent = Object.keys(APP.gameResponses).length;
-}
+function updateRespCount(){const el=$('host-resp-n');if(el)el.textContent=Object.keys(APP.gameResponses).length;}
+function autoAdvance(){const np=Object.keys(APP.gamePlayers).length,nr=Object.keys(APP.gameResponses).length;if(np>0&&nr>=np){clearInterval(APP.gameTimer);showHostResults();}}
+function forceResults(){clearInterval(APP.gameTimer);showHostResults();}
 
-function autoAdvance() {
-  const np = Object.keys(APP.gamePlayers).length;
-  const nr = Object.keys(APP.gameResponses).length;
-  if (np > 0 && nr >= np) { clearInterval(APP.gameTimer); showHostResults(); }
-}
-
-function forceResults() { clearInterval(APP.gameTimer); showHostResults(); }
-
-async function showHostResults() {
+async function showHostResults(){
   clearInterval(APP.gameTimer);
-  await update(ref(db, 'sessions/' + APP.gameSession.pin), { status: 'results' });
-  const q = APP.gameQuiz.questions[APP.gameQIdx];
-  $('res-q-text').textContent = q.text;
-  const responses = Object.values(APP.gameResponses);
-  $('res-count').textContent = responses.length + ' respostas recebidas';
-  const counts = q.opts.map((_,i) => responses.filter(r => r.opt_index===i).length);
-  const maxC = Math.max(...counts, 1);
-  const correctIdx = q.opts.findIndex(o => o.is_correct);
-  $('res-chart').innerHTML = q.opts.map((o,i) => `
-    <div class="bar-col">
-      <div class="bar-body" style="height:${Math.max(8,counts[i]/maxC*86)}%;background:${i===correctIdx?'var(--c-green2)':ANS_COLS[i].bg}">${counts[i]}</div>
-      <div class="bar-lbl">${ANS_COLS[i].l}</div>
-    </div>`).join('');
-  $('res-opts').innerHTML = q.opts.map((o,i) => `
-    <div class="opt-rv ${o.is_correct?'ok':'no'}">
-      <div class="opt-rv-ltr" style="background:${o.is_correct?'rgba(23,122,71,0.4)':ANS_COLS[i].bg+'66'}">${ANS_COLS[i].l}</div>
-      <div class="opt-rv-txt">${o.text||o}</div>
-      ${o.is_correct?'<div class="opt-rv-tag">✓ CORRETA</div>':''}
-    </div>`).join('');
-  const isLast = APP.gameQIdx >= APP.gameQuiz.questions.length-1;
-  $('next-q-btn').textContent = isLast ? '🏆 Ver Pódio' : 'Próxima →';
+  await db.ref('sessions/'+APP.gamePin).update({status:'results'});
+  const q=APP.gameQuiz.questions[APP.gameQIdx];
+  $('res-q-text').textContent=q.text;
+  const responses=Object.values(APP.gameResponses);
+  $('res-count').textContent=responses.length+' respostas recebidas';
+  const correctIdx=q.opts.findIndex(o=>o.is_correct);
+  const counts=q.opts.map((_,i)=>responses.filter(r=>r.opt_index===i).length);
+  const maxC=Math.max(...counts,1);
+  $('res-chart').innerHTML=q.opts.map((o,i)=>`<div class="bar-col"><div class="bar-body" style="height:${Math.max(8,counts[i]/maxC*86)}%;background:${i===correctIdx?'var(--c-green2)':ANS_COLS[i].bg}">${counts[i]}</div><div class="bar-lbl">${ANS_COLS[i].l}</div></div>`).join('');
+  $('res-opts').innerHTML=q.opts.map((o,i)=>`<div class="opt-rv ${o.is_correct?'ok':'no'}"><div class="opt-rv-ltr" style="background:${o.is_correct?'rgba(23,122,71,0.4)':ANS_COLS[i].bg+'66'}">${ANS_COLS[i].l}</div><div class="opt-rv-txt">${o.text||o}</div>${o.is_correct?'<div class="opt-rv-tag">✓ CORRETA</div>':''}</div>`).join('');
+  $('next-q-btn').textContent=APP.gameQIdx>=APP.gameQuiz.questions.length-1?'🏆 Ver Pódio':'Próxima →';
   showScreen('host-res');
 }
 
-async function nextQuestion() {
-  if (APP.gameQIdx >= APP.gameQuiz.questions.length-1) { showHostPodium(); return; }
-  const nextIdx = APP.gameQIdx+1;
-  await update(ref(db, 'sessions/'+APP.gameSession.pin), {
-    status:'active', current_question_index:nextIdx, question_started_at:Date.now(),
-  });
+async function nextQuestion(){
+  if(APP.gameQIdx>=APP.gameQuiz.questions.length-1){showHostPodium();return;}
+  const nextIdx=APP.gameQIdx+1;
+  await db.ref('sessions/'+APP.gamePin).update({status:'active',current_question_index:nextIdx,question_started_at:Date.now()});
   showHostQuestion(nextIdx);
 }
 
-async function showHostPodium() {
+async function showHostPodium(){
   clearGameListeners();
-  await update(ref(db, 'sessions/'+APP.gameSession.pin), { status:'finished' });
-  const snap = await get(ref(db, 'sessions/'+APP.gameSession.pin+'/players'));
-  const players = snap.val() ? Object.values(snap.val()).sort((a,b)=>(b.score||0)-(a.score||0)) : [];
-  $('podium-quiz-name').textContent = APP.gameQuiz.title;
-  const pc=['r1','r2','r3'], pp=['p1','p2','p3'];
-  $('rank-list').innerHTML = players.length
-    ? players.map((p,i) => `
-        <div class="rank-row ${pc[i]||''}" style="animation-delay:${i*60}ms">
-          <div class="rank-pos ${pp[i]||''}">${i+1}º</div>
-          <div class="rank-av">${p.avatar||'🎓'}</div>
-          <div class="rank-name">${p.nickname}</div>
-          <div class="rank-score">${p.score||0} pts</div>
-        </div>`).join('')
-    : '<div style="color:var(--c-muted);text-align:center;padding:20px;">Nenhum participante.</div>';
-  APP.lastReport = { quizTitle:APP.gameQuiz.title, date:new Date().toLocaleDateString('pt-BR'), totalQ:APP.gameQuiz.questions.length, players };
+  await db.ref('sessions/'+APP.gamePin).update({status:'finished'});
+  const snap=await db.ref('sessions/'+APP.gamePin+'/players').once('value');
+  const players=snap.val()?Object.values(snap.val()).sort((a,b)=>(b.score||0)-(a.score||0)):[];
+  $('podium-quiz-name').textContent=APP.gameQuiz.title;
+  const pc=['r1','r2','r3'],pp=['p1','p2','p3'];
+  $('rank-list').innerHTML=players.length?players.map((p,i)=>`<div class="rank-row ${pc[i]||''}" style="animation-delay:${i*60}ms"><div class="rank-pos ${pp[i]||''}">${i+1}º</div><div class="rank-av">${p.avatar||'🎓'}</div><div class="rank-name">${p.nickname}</div><div class="rank-score">${p.score||0} pts</div></div>`).join(''):'<div style="color:var(--c-muted);text-align:center;padding:20px;">Nenhum participante.</div>';
+  APP.lastReport={quizTitle:APP.gameQuiz.title,date:new Date().toLocaleDateString('pt-BR'),totalQ:APP.gameQuiz.questions.length,players};
   showScreen('podium');
 }
 
-function downloadCSV() {
-  const rep = APP.lastReport;
-  if (!rep) { toast('Jogue uma sessão primeiro', true); return; }
-  let csv = `LicitaQuiz — Relatório\nQuiz:,${rep.quizTitle}\nData:,${rep.date}\n\nPos,Participante,Pontuação\n`;
-  rep.players.forEach((p,i) => { csv += `${i+1},"${p.nickname}",${p.score||0}\n`; });
-  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=`LicitaQuiz_${rep.date.replace(/\//g,'-')}.csv`; a.click();
-  URL.revokeObjectURL(url); toast('CSV baixado!');
+function downloadCSV(){
+  const rep=APP.lastReport; if(!rep){toast('Jogue uma sessão primeiro',true);return;}
+  let csv=`LicitaQuiz\nQuiz:,${rep.quizTitle}\nData:,${rep.date}\n\nPos,Participante,Pontuação\n`;
+  rep.players.forEach((p,i)=>{csv+=`${i+1},"${p.nickname}",${p.score||0}\n`;});
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`LicitaQuiz_${rep.date.replace(/\//g,'-')}.csv`;a.click();
+  URL.revokeObjectURL(url);toast('CSV baixado!');
 }
 
-function showRelatorio() {
-  const rep = APP.lastReport;
-  if (!rep) { toast('Jogue uma sessão primeiro', true); return; }
-  $('rel-info').textContent = `${rep.quizTitle} • ${rep.date} • ${rep.totalQ} perguntas`;
-  const maxScore = (rep.totalQ||1)*1000;
-  const avg = rep.players.length ? Math.round(rep.players.reduce((s,p)=>s+(p.score||0),0)/rep.players.length) : 0;
-  $('rel-stats').innerHTML = `
-    <div class="rel-stat"><div class="rel-stat-val">${rep.players.length}</div><div class="rel-stat-lbl">Participantes</div></div>
-    <div class="rel-stat"><div class="rel-stat-val">${rep.totalQ}</div><div class="rel-stat-lbl">Perguntas</div></div>
-    <div class="rel-stat"><div class="rel-stat-val">${rep.players[0]?.score||0}</div><div class="rel-stat-lbl">Melhor placar</div></div>
-    <div class="rel-stat"><div class="rel-stat-val">${avg}</div><div class="rel-stat-lbl">Média turma</div></div>`;
-  $('rel-tbody').innerHTML = rep.players.map((p,i) => {
-    const pct = Math.round((p.score||0)/maxScore*100);
-    return `<tr><td><strong>${i+1}º</strong></td><td>${p.avatar||'🎓'} ${p.nickname}</td><td><strong style="color:var(--c-gold2);font-family:var(--f-mono);">${p.score||0}</strong></td><td>${Math.round(pct/100*(rep.totalQ||1))}</td><td style="min-width:80px;"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%"></div></div></td></tr>`;
-  }).join('');
+function showRelatorio(){
+  const rep=APP.lastReport; if(!rep){toast('Jogue uma sessão primeiro',true);return;}
+  $('rel-info').textContent=`${rep.quizTitle} • ${rep.date} • ${rep.totalQ} perguntas`;
+  const max=(rep.totalQ||1)*1000;
+  const avg=rep.players.length?Math.round(rep.players.reduce((s,p)=>s+(p.score||0),0)/rep.players.length):0;
+  $('rel-stats').innerHTML=`<div class="rel-stat"><div class="rel-stat-val">${rep.players.length}</div><div class="rel-stat-lbl">Participantes</div></div><div class="rel-stat"><div class="rel-stat-val">${rep.totalQ}</div><div class="rel-stat-lbl">Perguntas</div></div><div class="rel-stat"><div class="rel-stat-val">${rep.players[0]?.score||0}</div><div class="rel-stat-lbl">Melhor placar</div></div><div class="rel-stat"><div class="rel-stat-val">${avg}</div><div class="rel-stat-lbl">Média turma</div></div>`;
+  $('rel-tbody').innerHTML=rep.players.map((p,i)=>{const pct=Math.round((p.score||0)/max*100);return `<tr><td><strong>${i+1}º</strong></td><td>${p.avatar||'🎓'} ${p.nickname}</td><td><strong style="color:var(--c-gold2);font-family:var(--f-mono);">${p.score||0}</strong></td><td>${Math.round(pct/100*(rep.totalQ||1))}</td><td style="min-width:80px;"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%"></div></div></td></tr>`;}).join('');
   showScreen('relatorio');
 }
 
-// ═══════════════════════════════════════════════════════════
-//  PLAYER FLOW — Firebase Realtime
-// ═══════════════════════════════════════════════════════════
-async function joinGame() {
-  const pin = $('join-pin').value;
-  if (pin.length < 6) { toast('Código deve ter 6 dígitos', true); return; }
-  loader(true, 'Buscando sessão...');
-  const snap = await get(ref(db, 'sessions/'+pin));
+// ── PLAYER ─────────────────────────────────────────────────
+async function joinGame(){
+  const pin=$('join-pin').value;
+  if(pin.length<6){toast('Código deve ter 6 dígitos',true);return;}
+  loader(true,'Buscando sessão...');
+  const snap=await db.ref('sessions/'+pin).once('value');
   loader(false);
-  if (!snap.exists() || snap.val().status !== 'lobby') { toast('Código inválido ou sessão não está aberta', true); return; }
-  APP.gameSession = { pin, ...snap.val() };
+  if(!snap.exists()||snap.val().status!=='lobby'){toast('Código inválido ou sessão não está aberta',true);return;}
+  APP.gamePin=pin; APP.gameQuiz=null;
+  const sessData=snap.val();
+  // carrega o quiz para o player
+  const qSnap=await db.ref('quizzes/'+sessData.host_id+'/'+sessData.quiz_id).once('value');
+  if(qSnap.exists()){
+    const quiz=qSnap.val();
+    const questions=[];
+    if(quiz.questions){
+      Object.entries(quiz.questions).forEach(([qid,q])=>questions.push({id:qid,...q,opts:q.opts?Object.values(q.opts):[]}));
+      questions.sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    }
+    APP.gameQuiz={...quiz,questions};
+  }
   renderAvatarGrid(); showScreen('nick');
 }
 
-function renderAvatarGrid() {
-  const g = $('av-grid'); if (!g) return;
-  APP.selAvatar = null;
-  g.innerHTML = AVATARES.map(a => `<div class="av-btn" onclick="selAv(this,'${a}')">${a}</div>`).join('');
+function renderAvatarGrid(){
+  const g=$('av-grid'); if(!g) return;
+  APP.selAvatar=null;
+  g.innerHTML=AVATARES.map(a=>`<div class="av-btn" onclick="selAv(this,'${a}')">${a}</div>`).join('');
 }
+function selAv(el,av){document.querySelectorAll('.av-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');APP.selAvatar=av;}
 
-function selAv(el, av) {
-  document.querySelectorAll('.av-btn').forEach(b => b.classList.remove('on'));
-  el.classList.add('on'); APP.selAvatar = av;
-}
-
-async function joinWithNick() {
-  const name = $('nick-inp').value.trim();
-  if (!name) { toast('Digite seu nome', true); return; }
-  if (!APP.selAvatar) { toast('Escolha um avatar', true); return; }
-  loader(true, 'Entrando...');
-  const playerId = push(ref(db)).key;
-  APP.playerInfo = { id: playerId, nickname: name, avatar: APP.selAvatar };
-  APP.playerScore = 0; APP.playerResponses = [];
-  await set(ref(db, 'sessions/'+APP.gameSession.pin+'/players/'+playerId), {
-    nickname: name, avatar: APP.selAvatar, score: 0, joined_at: Date.now(),
-  });
-
-  // Escuta mudanças na sessão
+async function joinWithNick(){
+  const name=$('nick-inp').value.trim();
+  if(!name){toast('Digite seu nome',true);return;}
+  if(!APP.selAvatar){toast('Escolha um avatar',true);return;}
+  loader(true,'Entrando...');
+  const playerId=db.ref().push().key;
+  APP.playerInfo={id:playerId,nickname:name,avatar:APP.selAvatar};
+  APP.playerScore=0; APP.playerResponses=[];
+  await db.ref('sessions/'+APP.gamePin+'/players/'+playerId).set({nickname:name,avatar:APP.selAvatar,score:0,joined_at:Date.now()});
   clearGameListeners();
-  const sessRef = ref(db, 'sessions/'+APP.gameSession.pin);
-  const sessFn = snap => { if (snap.exists()) handleSessionUpdate(snap.val()); };
-  onValue(sessRef, sessFn);
-  APP.gameListeners.push({ r: sessRef, fn: sessFn });
-
-  $('wait-profile').textContent = APP.selAvatar+' '+name;
-  $('wait-pin').textContent = APP.gameSession.pin;
-  loader(false); showScreen('wait');
-  toast('Você entrou! Aguardando o instrutor iniciar...');
+  let lastStatus=null, lastQIdx=null;
+  const sRef=db.ref('sessions/'+APP.gamePin);
+  sRef.on('value',snap=>{
+    if(!snap.exists()) return;
+    const s=snap.val();
+    if(s.status==='active'&&(lastStatus!=='active'||lastQIdx!==s.current_question_index)){
+      lastStatus='active'; lastQIdx=s.current_question_index;
+      showPlayerQ(s.current_question_index,s.question_started_at);
+    } else if(s.status==='results'&&lastStatus!=='results'){
+      lastStatus='results'; showPlayerFeedback();
+    } else if(s.status==='finished'&&lastStatus!=='finished'){
+      lastStatus='finished'; showPlayerPodiumFinal();
+    }
+  });
+  APP.gameListeners.push(sRef);
+  $('wait-profile').textContent=APP.selAvatar+' '+name;
+  $('wait-pin').textContent=APP.gamePin;
+  loader(false); showScreen('wait'); toast('Você entrou! Aguardando o instrutor...');
 }
 
-let lastSessionStatus = null, lastQIdx = null;
-
-async function handleSessionUpdate(session) {
-  if (session.status === 'active') {
-    if (lastSessionStatus !== 'active' || lastQIdx !== session.current_question_index) {
-      lastSessionStatus = 'active'; lastQIdx = session.current_question_index;
-      APP.gameSession = { ...APP.gameSession, ...session };
-      await loadAndShowPlayerQ(session);
-    }
-  } else if (session.status === 'results' && lastSessionStatus !== 'results') {
-    lastSessionStatus = 'results';
-    showPlayerFeedback();
-  } else if (session.status === 'finished' && lastSessionStatus !== 'finished') {
-    lastSessionStatus = 'finished';
-    await showPlayerPodium(session);
-  }
-}
-
-async function loadAndShowPlayerQ(session) {
-  const q = APP.gameQuiz?.questions?.[session.current_question_index];
-  if (!q) {
-    // Carrega as questões do quiz se ainda não tiver
-    const snap = await get(ref(db, 'quizzes/'+session.host_id+'/'+session.quiz_id));
-    if (snap.exists()) {
-      const quiz = snap.val();
-      const questions = [];
-      if (quiz.questions) {
-        Object.entries(quiz.questions).forEach(([qid,qq]) => questions.push({id:qid,...qq,opts:qq.opts||[]}));
-        questions.sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-      }
-      APP.gameQuiz = { ...quiz, questions };
-    }
-  }
-  const currQ = APP.gameQuiz?.questions?.[session.current_question_index];
-  if (!currQ) return;
-
-  APP.playerAnswered = false;
-  $('player-q-text').textContent = currQ.text;
-  $('player-q-prog').textContent = 'Pergunta '+(session.current_question_index+1);
-  $('player-q-bar').style.width = ((session.current_question_index+1)/(APP.gameQuiz.questions.length)*100)+'%';
-  $('player-ans-grid').style.display = 'grid';
-  $('player-sent').style.display = 'none';
-
-  $('player-ans-grid').innerHTML = currQ.opts.map((o,i) => `
-    <button class="player-ans ans-${'abcd'[i]}"
-      onclick="playerAnswer(${i},${o.is_correct},${session.question_started_at},${currQ.time_limit||20})">
-      ${ANS_COLS[i].l}
-    </button>`).join('');
-
-  const tl = currQ.time_limit||20;
-  APP.gameTimeLeft = tl;
+function showPlayerQ(idx,startedAt){
+  const q=APP.gameQuiz?.questions?.[idx]; if(!q) return;
+  APP.playerAnswered=false;
+  $('player-q-text').textContent=q.text;
+  $('player-q-prog').textContent='Pergunta '+(idx+1);
+  $('player-q-bar').style.width=((idx+1)/(APP.gameQuiz.questions.length)*100)+'%';
+  $('player-ans-grid').style.display='grid'; $('player-sent').style.display='none';
+  $('player-ans-grid').innerHTML=q.opts.map((o,i)=>`<button class="player-ans ans-${'abcd'[i]}" onclick="playerAnswer(${i},${o.is_correct},${startedAt},${q.time_limit||20})">${ANS_COLS[i].l}</button>`).join('');
+  const tl=q.time_limit||20; APP.gameTimeLeft=tl;
   clearInterval(APP.playerTimer);
-  const orb = $('player-timer'); orb.classList.remove('danger');
-  orb.textContent = tl;
-  APP.playerTimer = setInterval(() => {
+  const orb=$('player-timer'); orb.classList.remove('danger'); orb.textContent=tl;
+  APP.playerTimer=setInterval(()=>{
     APP.gameTimeLeft--;
-    orb.textContent = APP.gameTimeLeft;
-    orb.classList.toggle('danger', APP.gameTimeLeft<=5);
-    if (APP.gameTimeLeft<=0) { clearInterval(APP.playerTimer); if (!APP.playerAnswered) playerAnswer(-1,false,session.question_started_at,tl); }
-  }, 1000);
+    orb.textContent=APP.gameTimeLeft; orb.classList.toggle('danger',APP.gameTimeLeft<=5);
+    if(APP.gameTimeLeft<=0){clearInterval(APP.playerTimer);if(!APP.playerAnswered)playerAnswer(-1,false,startedAt,tl);}
+  },1000);
   showScreen('player-q');
 }
 
-async function playerAnswer(optIdx, isCorrect, startedAt, timeLimit) {
-  if (APP.playerAnswered) return;
-  APP.playerAnswered = true;
-  clearInterval(APP.playerTimer);
-  const elapsed = Date.now()-startedAt;
-  let pts = 0;
-  if (isCorrect && optIdx>=0) {
-    const ratio = Math.min(elapsed/1000/timeLimit, 1);
-    pts = Math.round((1-ratio*0.5)*1000);
+async function playerAnswer(optIdx,isCorrect,startedAt,timeLimit){
+  if(APP.playerAnswered) return;
+  APP.playerAnswered=true; clearInterval(APP.playerTimer);
+  const elapsed=Date.now()-startedAt;
+  let pts=0;
+  if(isCorrect&&optIdx>=0){const ratio=Math.min(elapsed/1000/timeLimit,1);pts=Math.round((1-ratio*0.5)*1000);}
+  APP.playerScore+=pts;
+  APP.playerResponses.push({optIdx,isCorrect,pts});
+  if(optIdx>=0){
+    await db.ref('sessions/'+APP.gamePin+'/responses/'+APP.playerInfo.id).set({opt_index:optIdx,is_correct:isCorrect,points:pts,time_ms:elapsed});
+    await db.ref('sessions/'+APP.gamePin+'/players/'+APP.playerInfo.id).update({score:APP.playerScore});
   }
-  APP.playerScore += pts;
-  APP.playerResponses.push({ optIdx, isCorrect, pts });
-
-  if (optIdx >= 0) {
-    await set(ref(db, 'sessions/'+APP.gameSession.pin+'/responses/'+APP.playerInfo.id), {
-      opt_index: optIdx, is_correct: isCorrect, points: pts, time_ms: elapsed,
-    });
-    await update(ref(db, 'sessions/'+APP.gameSession.pin+'/players/'+APP.playerInfo.id), { score: APP.playerScore });
-  }
-  $('player-ans-grid').style.display = 'none';
-  $('player-sent').style.display = 'flex';
+  $('player-ans-grid').style.display='none'; $('player-sent').style.display='flex';
 }
 
-function showPlayerFeedback() {
-  const last = APP.playerResponses[APP.playerResponses.length-1];
-  if (!last) return;
-  const ok = last.isCorrect;
-  $('fb-ring').textContent = ok ? '✅' : '❌';
-  $('fb-ring').style.background = ok ? 'rgba(23,122,71,0.2)' : 'rgba(176,48,32,0.2)';
-  $('fb-title').textContent = ok ? 'Correto! 🎉' : 'Incorreto!';
-  $('fb-sub').textContent = ok ? 'Excelente resposta!' : 'Continue estudando!';
-  $('fb-pts').textContent = '+'+last.pts;
-  $('fb-total').textContent = APP.playerScore;
+function showPlayerFeedback(){
+  const last=APP.playerResponses[APP.playerResponses.length-1]; if(!last) return;
+  const ok=last.isCorrect;
+  $('fb-ring').textContent=ok?'✅':'❌';
+  $('fb-ring').style.background=ok?'rgba(23,122,71,0.2)':'rgba(176,48,32,0.2)';
+  $('fb-title').textContent=ok?'Correto! 🎉':'Incorreto!';
+  $('fb-sub').textContent=ok?'Excelente resposta!':'Continue estudando!';
+  $('fb-pts').textContent='+'+last.pts; $('fb-total').textContent=APP.playerScore;
   showScreen('feedback');
 }
 
-async function showPlayerPodium(session) {
+async function showPlayerPodiumFinal(){
   clearGameListeners();
-  const snap = await get(ref(db, 'sessions/'+APP.gameSession.pin+'/players'));
-  const players = snap.val() ? Object.values(snap.val()).sort((a,b)=>(b.score||0)-(a.score||0)) : [];
-  const rank = players.findIndex(p=>p.nickname===APP.playerInfo.nickname)+1;
-  const icons = {1:'🥇',2:'🥈',3:'🥉'};
-  $('pp-icon').textContent = icons[rank]||'🎓';
-  $('pp-msg').textContent = rank===1?'Você Venceu! 🏆':rank<=3?'Você está no Pódio! 🎉':'Bom jogo!';
-  $('pp-rank').textContent = rank>0?rank+'º':'—';
-  $('pp-score').textContent = APP.playerScore;
+  const snap=await db.ref('sessions/'+APP.gamePin+'/players').once('value');
+  const players=snap.val()?Object.values(snap.val()).sort((a,b)=>(b.score||0)-(a.score||0)):[];
+  const rank=players.findIndex(p=>p.nickname===APP.playerInfo.nickname)+1;
+  const icons={1:'🥇',2:'🥈',3:'🥉'};
+  $('pp-icon').textContent=icons[rank]||'🎓';
+  $('pp-msg').textContent=rank===1?'Você Venceu! 🏆':rank<=3?'Você está no Pódio! 🎉':'Bom jogo!';
+  $('pp-rank').textContent=rank>0?rank+'º':'—'; $('pp-score').textContent=APP.playerScore;
   showScreen('pplayer');
 }
 
-// ═══════════════════════════════════════════════════════════
-//  STUDY MODE
-// ═══════════════════════════════════════════════════════════
-function renderStudyCats() {
-  const cats = [...new Set(BANCO.map(q=>q.cat))];
-  const g = $('study-cats'); if (!g) return;
-  g.innerHTML = cats.map(cat => {
-    const n = BANCO.filter(q=>q.cat===cat).length;
-    const on = APP.studyCats.includes(cat);
-    return `<div class="cat-card ${on?'on':''}" onclick="toggleCat('${cat}',this)">
-      <div class="cat-icon">${CAT_ICONS[cat]||'📋'}</div>
-      <div class="cat-name">${cat}</div>
-      <div class="cat-count">${n} questões</div>
-    </div>`;
+// ── STUDY ──────────────────────────────────────────────────
+function renderStudyCats(){
+  const cats=[...new Set(BANCO.map(q=>q.cat))];
+  const g=$('study-cats'); if(!g) return;
+  g.innerHTML=cats.map(cat=>{
+    const n=BANCO.filter(q=>q.cat===cat).length, on=APP.studyCats.includes(cat);
+    return `<div class="cat-card ${on?'on':''}" onclick="toggleCat('${cat}',this)"><div class="cat-icon">${CAT_ICONS[cat]||'📋'}</div><div class="cat-name">${cat}</div><div class="cat-count">${n} questões</div></div>`;
   }).join('');
-  $('study-start-btn').disabled = APP.studyCats.length===0;
+  $('study-start-btn').disabled=APP.studyCats.length===0;
 }
 
-function toggleCat(cat, el) {
-  const i = APP.studyCats.indexOf(cat);
-  if (i>=0) APP.studyCats.splice(i,1); else APP.studyCats.push(cat);
-  el.classList.toggle('on');
-  $('study-start-btn').disabled = APP.studyCats.length===0;
+function toggleCat(cat,el){
+  const i=APP.studyCats.indexOf(cat);
+  if(i>=0) APP.studyCats.splice(i,1); else APP.studyCats.push(cat);
+  el.classList.toggle('on'); $('study-start-btn').disabled=APP.studyCats.length===0;
 }
 
-function startStudy() {
-  const pool = BANCO.filter(q=>APP.studyCats.includes(q.cat));
-  const qty = parseInt($('study-qty').value)||10;
-  APP.studyQs = [...pool].sort(()=>Math.random()-0.5).slice(0,Math.min(qty,pool.length));
-  APP.studyQIdx=0; APP.studyScore=0; APP.studyCorrect=0;
-  showStudyQ(0);
+function startStudy(){
+  const pool=BANCO.filter(q=>APP.studyCats.includes(q.cat));
+  const qty=parseInt($('study-qty').value)||10;
+  APP.studyQs=[...pool].sort(()=>Math.random()-0.5).slice(0,Math.min(qty,pool.length));
+  APP.studyQIdx=0; APP.studyScore=0; APP.studyCorrect=0; showStudyQ(0);
 }
 
-function showStudyQ(idx) {
+function showStudyQ(idx){
   APP.studyQIdx=idx; APP.studyAnswered=false;
-  const q = APP.studyQs[idx];
+  const q=APP.studyQs[idx];
   $('study-q-text').textContent=q.q;
   $('study-prog-lbl').textContent=`Pergunta ${idx+1} de ${APP.studyQs.length}`;
   $('study-prog-bar').style.width=((idx+1)/APP.studyQs.length*100)+'%';
   $('study-score-n').textContent=APP.studyScore;
-  $('study-expl').style.display='none';
-  $('study-next-row').style.display='none';
-  $('study-ans-grid').innerHTML=q.opts.map((o,i)=>`
-    <button class="ans-btn ans-${'abcd'[i]}" onclick="studyAnswer(${i})">
-      <div class="ans-letter">${ANS_COLS[i].l}</div>
-      <div class="ans-text">${o}</div>
-    </button>`).join('');
+  $('study-expl').style.display='none'; $('study-next-row').style.display='none';
+  $('study-ans-grid').innerHTML=q.opts.map((o,i)=>`<button class="ans-btn ans-${'abcd'[i]}" onclick="studyAnswer(${i})"><div class="ans-letter">${ANS_COLS[i].l}</div><div class="ans-text">${o}</div></button>`).join('');
   const tl=parseInt($('study-time').value)||0;
   clearInterval(APP.studyTimer);
   const orb=$('study-timer'); orb.classList.remove('danger');
-  if(tl>0){
-    let t=tl; orb.textContent=t;
-    APP.studyTimer=setInterval(()=>{
-      t--; orb.textContent=t; orb.classList.toggle('danger',t<=5);
-      if(t<=0){clearInterval(APP.studyTimer);if(!APP.studyAnswered)studyAnswer(-1);}
-    },1000);
-  } else { orb.textContent='∞'; }
+  if(tl>0){let t=tl;orb.textContent=t;APP.studyTimer=setInterval(()=>{t--;orb.textContent=t;orb.classList.toggle('danger',t<=5);if(t<=0){clearInterval(APP.studyTimer);if(!APP.studyAnswered)studyAnswer(-1);}},1000);}
+  else orb.textContent='∞';
   showScreen('study-q');
 }
 
-async function studyAnswer(idx) {
+async function studyAnswer(idx){
   if(APP.studyAnswered) return;
   APP.studyAnswered=true; clearInterval(APP.studyTimer);
-  const q=APP.studyQs[APP.studyQIdx];
-  const ok=idx===q.c;
+  const q=APP.studyQs[APP.studyQIdx], ok=idx===q.c;
   if(ok){APP.studyScore+=1000;APP.studyCorrect++;}
   $('study-score-n').textContent=APP.studyScore;
   document.querySelectorAll('#study-ans-grid .ans-btn').forEach((b,i)=>{
-    if(i===q.c) b.classList.add('revealed-correct');
-    else if(i===idx&&!ok) b.classList.add('revealed-wrong');
-    b.onclick=null; b.style.cursor='default';
+    if(i===q.c)b.classList.add('revealed-correct');
+    else if(i===idx&&!ok)b.classList.add('revealed-wrong');
+    b.onclick=null;b.style.cursor='default';
   });
-  $('study-next-row').style.display='flex';
-  $('study-expl').style.display='block';
+  $('study-next-row').style.display='flex'; $('study-expl').style.display='block';
   $('study-expl-text').textContent='Buscando explicação...';
-  try {
-    const txt=await callClaude(`Explique em 2-3 frases por que a resposta correta é "${q.opts[q.c]}" para:\n\n${q.q}\n\nReferência: ${q.ref}. Seja didático e cite o artigo.`);
-    $('study-expl-text').textContent=txt;
-  } catch(e){ $('study-expl-text').textContent=`Resposta correta: ${q.opts[q.c]}. Ref.: ${q.ref}.`; }
+  try{const txt=await callClaude(`Explique em 2-3 frases por que "${q.opts[q.c]}" é a resposta correta para:\n${q.q}\nRef: ${q.ref}`);$('study-expl-text').textContent=txt;}
+  catch(e){$('study-expl-text').textContent=`Resposta correta: ${q.opts[q.c]}. Ref.: ${q.ref}.`;}
 }
 
-function nextStudyQ() {
-  if(APP.studyQIdx>=APP.studyQs.length-1) showStudyFinal();
-  else showStudyQ(APP.studyQIdx+1);
-}
+function nextStudyQ(){if(APP.studyQIdx>=APP.studyQs.length-1)showStudyFinal();else showStudyQ(APP.studyQIdx+1);}
 
-function showStudyFinal() {
+function showStudyFinal(){
   const pct=Math.round(APP.studyCorrect/APP.studyQs.length*100);
   $('sf-icon').textContent=pct>=80?'🏆':pct>=60?'📚':'💪';
   $('sf-title').textContent=pct>=80?'Excelente domínio!':pct>=60?'Bom resultado!':'Continue praticando!';
-  $('sf-stats').innerHTML=`
-    <div class="stat-box"><div class="stat-val">${APP.studyCorrect}</div><div class="stat-lbl">Acertos</div></div>
-    <div class="stat-box"><div class="stat-val">${APP.studyQs.length-APP.studyCorrect}</div><div class="stat-lbl">Erros</div></div>
-    <div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-lbl">Aproveit.</div></div>
-    <div class="stat-box"><div class="stat-val">${APP.studyScore}</div><div class="stat-lbl">Pontos</div></div>`;
+  $('sf-stats').innerHTML=`<div class="stat-box"><div class="stat-val">${APP.studyCorrect}</div><div class="stat-lbl">Acertos</div></div><div class="stat-box"><div class="stat-val">${APP.studyQs.length-APP.studyCorrect}</div><div class="stat-lbl">Erros</div></div><div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-lbl">Aproveit.</div></div><div class="stat-box"><div class="stat-val">${APP.studyScore}</div><div class="stat-lbl">Pontos</div></div>`;
   showScreen('study-final');
 }
 
-// ═══════════════════════════════════════════════════════════
-//  BANCO
-// ═══════════════════════════════════════════════════════════
-function renderBanco() {
+// ── BANCO ──────────────────────────────────────────────────
+function renderBanco(){
   const cats=['Todos',...new Set(BANCO.map(q=>q.cat))];
   $('banco-filters').innerHTML=cats.map(c=>`<div class="filter-pill ${APP.bancoFilter===c?'on':''}" onclick="setBancoFilter('${c}')">${c}</div>`).join('');
   const items=APP.bancoFilter==='Todos'?BANCO:BANCO.filter(q=>q.cat===APP.bancoFilter);
-  $('banco-items').innerHTML=items.map(q=>`
-    <div class="banco-item">
-      <div class="banco-item-q">${q.q}</div>
-      <div class="banco-item-foot">
-        <span class="badge badge-gold">${q.cat}</span>
-        <span class="badge badge-teal">${q.ref}</span>
-        <span style="margin-left:auto;font-size:10px;color:var(--c-muted);">${ANS_COLS[q.c].l}: ${q.opts[q.c]}</span>
-      </div>
-    </div>`).join('');
+  $('banco-items').innerHTML=items.map(q=>`<div class="banco-item"><div class="banco-item-q">${q.q}</div><div class="banco-item-foot"><span class="badge badge-gold">${q.cat}</span><span class="badge badge-teal">${q.ref}</span><span style="margin-left:auto;font-size:10px;color:var(--c-muted);">${ANS_COLS[q.c].l}: ${q.opts[q.c]}</span></div></div>`).join('');
 }
 
 function setBancoFilter(cat){APP.bancoFilter=cat;renderBanco();}
@@ -945,34 +675,17 @@ function setBancoFilter(cat){APP.bancoFilter=cat;renderBanco();}
 async function doBancoAI(){
   setAI('Gerando novas questões...','Criando 5 questões para o banco');showScreen('ai');
   try{
-    const r=await callClaude(`Gere 5 questões de múltipla escolha sobre licitações (Lei 14.133/2021). Responda APENAS com JSON sem markdown:\n[{"cat":"CATEGORIA","q":"PERGUNTA","opts":["A","B","C","D"],"c":0,"ref":"Art. X"}]\nCategorias: Modalidades,Contratos,Penalidades,Habilitação,Planejamento. c=índice da correta (0-3).`);
+    const r=await callClaude('Gere 5 questões de múltipla escolha sobre licitações (Lei 14.133/2021). APENAS JSON:\n[{"cat":"CATEGORIA","q":"PERGUNTA","opts":["A","B","C","D"],"c":0,"ref":"Art. X"}]\nCategorias: Modalidades,Contratos,Penalidades,Habilitação,Planejamento. c=índice da correta (0-3).');
     const p=JSON.parse(r.replace(/```json|```/g,'').trim());
     p.forEach((q,i)=>{q.id='ai_'+Date.now()+'_'+i;BANCO.push(q);});
-    showScreen('banco');renderBanco();toast(`${p.length} questões adicionadas!`);
+    showScreen('banco');renderBanco();toast(p.length+' questões adicionadas!');
   }catch(e){showScreen('banco');toast('Erro ao gerar',true);}
 }
 
-// ═══════════════════════════════════════════════════════════
-//  AUTO-PIN FROM URL
-// ═══════════════════════════════════════════════════════════
-function checkUrlPin() {
-  const p = new URLSearchParams(window.location.search).get('pin');
-  if (p && p.length===6) { $('join-pin').value=p; showScreen('join'); toast('PIN: '+p+' — Confirme para entrar'); }
+// ── URL PIN ────────────────────────────────────────────────
+function checkUrlPin(){
+  const p=new URLSearchParams(window.location.search).get('pin');
+  if(p&&p.length===6){$('join-pin').value=p;showScreen('join');toast('PIN: '+p+' — Confirme para entrar');}
 }
-
-// ═══════════════════════════════════════════════════════════
-//  EXPOSE GLOBALS (necessário pois usamos onclick no HTML)
-// ═══════════════════════════════════════════════════════════
-Object.assign(window, {
-  showScreen, goHome, goHost, goStudy, handleAvatarClick, togglePass,
-  doLogin, doSignup, doLogout,
-  createQuiz, deleteQuiz, editQuiz, selectQ, addQuestion, removeQ,
-  toggleCorrect, saveQuiz, saveAndBack, saveAndPlay,
-  aiSuggestQ, doGenerateAIQs, doGenerateAIQuiz,
-  hostGame, copyPin, sharePin, cancelLobby, startGame, forceResults, nextQuestion, downloadCSV, showRelatorio,
-  joinGame, selAv, joinWithNick, playerAnswer,
-  toggleCat, startStudy, studyAnswer, nextStudyQ,
-  setBancoFilter, doBancoAI,
-});
 
 checkUrlPin();
