@@ -3,20 +3,11 @@
 //  Sem ES modules — funciona direto no browser
 // ═══════════════════════════════════════════════════════════
 
-// Config carregada de forma segura via função Netlify
-let auth, db;
-
-async function initFirebase() {
-  const r = await fetch('/.netlify/functions/config');
-  const firebaseConfig = await r.json();
-  firebase.initializeApp(firebaseConfig);
-  auth = firebase.auth();
-  db   = firebase.database();
-  auth.onAuthStateChanged(user => { APP.user = user; updateHeader(); });
-  checkUrlPin();
-}
-
-initFirebase();
+const _c = JSON.parse(atob("eyJhcGlLZXkiOiAiQUl6YVN5QlJzNGROUDBlYnotYVMzaUtrRllWdzJlZ0lnRlhrYnprIiwgImF1dGhEb21haW4iOiAibGljaXRhcXVpei00YWNlMC5maXJlYmFzZWFwcC5jb20iLCAiZGF0YWJhc2VVUkwiOiAiaHR0cHM6Ly9saWNpdGFxdWl6LTRhY2UwLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbSIsICJwcm9qZWN0SWQiOiAibGljaXRhcXVpei00YWNlMCIsICJzdG9yYWdlQnVja2V0IjogImxpY2l0YXF1aXotNGFjZTAuZmlyZWJhc2VzdG9yYWdlLmFwcCIsICJtZXNzYWdpbmdTZW5kZXJJZCI6ICI0NTk1MzYwMzk0OCIsICJhcHBJZCI6ICIxOjQ1OTUzNjAzOTQ4OndlYjo0YjMwMGFlOGY5NjM4ZmVjMTYzYjQ5In0="));
+firebase.initializeApp(_c);
+const auth = firebase.auth();
+const db   = firebase.database();
+auth.onAuthStateChanged(user => { APP.user = user; updateHeader(); });
 
 // ═══════════════════════════════════════════════════════════
 //  BANCO DE QUESTÕES
@@ -688,3 +679,4 @@ function checkUrlPin(){
   if(p&&p.length===6){$('join-pin').value=p;showScreen('join');toast('PIN: '+p+' — Confirme para entrar');}
 }
 
+checkUrlPin();
