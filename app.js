@@ -3,19 +3,20 @@
 //  Sem ES modules — funciona direto no browser
 // ═══════════════════════════════════════════════════════════
 
-const firebaseConfig = {
-  apiKey:            document.querySelector('meta[name="fb-api-key"]')?.content,
-  authDomain:        document.querySelector('meta[name="fb-auth-domain"]')?.content,
-  databaseURL:       document.querySelector('meta[name="fb-database-url"]')?.content,
-  projectId:         document.querySelector('meta[name="fb-project-id"]')?.content,
-  storageBucket:     document.querySelector('meta[name="fb-storage-bucket"]')?.content,
-  messagingSenderId: document.querySelector('meta[name="fb-sender-id"]')?.content,
-  appId:             document.querySelector('meta[name="fb-app-id"]')?.content,
-};
+// Config carregada de forma segura via função Netlify
+let auth, db;
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.database();
+async function initFirebase() {
+  const r = await fetch('/.netlify/functions/config');
+  const firebaseConfig = await r.json();
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db   = firebase.database();
+  auth.onAuthStateChanged(user => { APP.user = user; updateHeader(); });
+  checkUrlPin();
+}
+
+initFirebase();
 
 // ═══════════════════════════════════════════════════════════
 //  BANCO DE QUESTÕES
@@ -103,7 +104,6 @@ function goStudy(){ renderStudyCats(); showScreen('study'); }
 function togglePass(id,btn){ const i=document.getElementById(id); i.type=i.type==='password'?'text':'password'; btn.textContent=i.type==='password'?'👁️':'🙈'; }
 
 // ── AUTH ───────────────────────────────────────────────────
-auth.onAuthStateChanged(user => { APP.user=user; updateHeader(); });
 
 function updateHeader() {
   const u=APP.user, n=u?.displayName||u?.email?.split('@')[0]||'';
@@ -688,4 +688,3 @@ function checkUrlPin(){
   if(p&&p.length===6){$('join-pin').value=p;showScreen('join');toast('PIN: '+p+' — Confirme para entrar');}
 }
 
-checkUrlPin();
