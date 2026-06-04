@@ -3,7 +3,7 @@
 //  Sem ES modules — funciona direto no browser
 // ═══════════════════════════════════════════════════════════
 
-const _c = JSON.parse(atob("eyJhcGlLZXkiOiAiQUl6YVN5RGFwOEFITC05dGJfYUFJVjdDQkJra3ZSS3JzTEZONHh3IiwgImF1dGhEb21haW4iOiAibGljaXRhcXVpei00YWNlMC5maXJlYmFzZWFwcC5jb20iLCAiZGF0YWJhc2VVUkwiOiAiaHR0cHM6Ly9saWNpdGFxdWl6LTRhY2UwLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbSIsICJwcm9qZWN0SWQiOiAibGljaXRhcXVpei00YWNlMCIsICJzdG9yYWdlQnVja2V0IjogImxpY2l0YXF1aXotNGFjZTAuZmlyZWJhc2VzdG9yYWdlLmFwcCIsICJtZXNzYWdpbmdTZW5kZXJJZCI6ICI0NTk1MzYwMzk0OCIsICJhcHBJZCI6ICIxOjQ1OTUzNjAzOTQ4OndlYjo0YjMwMGFlOGY5NjM4ZmVjMTYzYjQ5In0="));
+const _c = JSON.parse(atob("eyJhcGlLZXkiOiAiQUl6YVN5QlJzNGROUDBlYnotYVMzaUtrRllWdzJlZ0lnRlhrYnprIiwgImF1dGhEb21haW4iOiAibGljaXRhcXVpei00YWNlMC5maXJlYmFzZWFwcC5jb20iLCAiZGF0YWJhc2VVUkwiOiAiaHR0cHM6Ly9saWNpdGFxdWl6LTRhY2UwLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbSIsICJwcm9qZWN0SWQiOiAibGljaXRhcXVpei00YWNlMCIsICJzdG9yYWdlQnVja2V0IjogImxpY2l0YXF1aXotNGFjZTAuZmlyZWJhc2VzdG9yYWdlLmFwcCIsICJtZXNzYWdpbmdTZW5kZXJJZCI6ICI0NTk1MzYwMzk0OCIsICJhcHBJZCI6ICIxOjQ1OTUzNjAzOTQ4OndlYjo0YjMwMGFlOGY5NjM4ZmVjMTYzYjQ5In0="));
 firebase.initializeApp(_c);
 const auth = firebase.auth();
 const db   = firebase.database();
