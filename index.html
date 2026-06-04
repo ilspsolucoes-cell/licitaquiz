@@ -343,6 +343,7 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
       <button class="hdr-nav-btn" id="nav-aluno" onclick="showScreen('join')">Aluno</button>
       <button class="hdr-nav-btn" id="nav-estudo" onclick="goStudy()">Estudar</button>
       <button class="hdr-nav-btn" id="nav-banco" onclick="showScreen('banco')">Banco</button>
+      <button class="hdr-nav-btn" id="nav-admin" onclick="goAdmin()">⚙️ Admin</button>
     </nav>
     <div class="hdr-user">
       <span id="hdr-user-name"></span>
@@ -391,6 +392,7 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
         </div>
       </div>
       <button class="btn btn-gold btn-full" onclick="doLogin()">Entrar</button>
+      <div class="auth-link" style="margin-top:8px;"><a onclick="showScreen('forgot')">Esqueci minha senha</a></div>
       <div class="auth-link">Ainda não tem conta? <a onclick="showScreen('signup')">Criar agora</a></div>
     </div></div>
   </div>
@@ -694,6 +696,48 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
     </div>
   </div>
 </div>
+
+  <!-- RECUPERAR SENHA -->
+  <div class="screen" id="screen-forgot">
+    <div class="auth-body"><div class="auth-card">
+      <div class="auth-icon">🔑</div>
+      <div class="auth-title">Recuperar Senha</div>
+      <div class="auth-sub">Digite seu e-mail e enviaremos um link para redefinir sua senha</div>
+      <div class="auth-fields">
+        <input type="email" class="inp" id="forgot-email" placeholder="Seu e-mail cadastrado">
+      </div>
+      <button class="btn btn-gold btn-full" onclick="doForgotPassword()">Enviar Link</button>
+      <div class="auth-link" style="margin-top:14px;"><a onclick="showScreen('login')">← Voltar ao login</a></div>
+    </div></div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div class="screen" id="screen-admin">
+    <div class="scroll">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+        <div>
+          <div class="pg-title">⚙️ Painel Administrativo</div>
+          <div class="pg-sub">Gerencie usuários, códigos de acesso e estatísticas</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="showScreen('dash')">← Voltar</button>
+      </div>
+      <div class="lbl">ESTATÍSTICAS GERAIS</div>
+      <div class="rel-stats" id="admin-stats" style="margin-bottom:20px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="lbl" style="margin-bottom:0;">CÓDIGOS DE ACESSO</div>
+        <button class="btn btn-gold btn-sm" onclick="generateAccessCode()">+ Gerar Código</button>
+      </div>
+      <div id="access-codes-list" style="display:flex;flex-direction:column;gap:7px;margin-bottom:24px;"></div>
+      <div class="lbl">INSTRUTORES CADASTRADOS</div>
+      <div style="overflow-x:auto;">
+        <table class="rel-table">
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Órgão</th><th>OAB</th><th>Cadastro</th></tr></thead>
+          <tbody id="admin-users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
