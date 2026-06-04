@@ -7,7 +7,19 @@ const _c = JSON.parse(atob("eyJhcGlLZXkiOiAiQUl6YVN5QlJzNGROUDBlYnotYVMzaUtrRllW
 firebase.initializeApp(_c);
 const auth = firebase.auth();
 const db   = firebase.database();
-auth.onAuthStateChanged(user => { APP.user = user; updateHeader(); });
+auth.onAuthStateChanged(user => {
+  APP.user = user;
+  updateHeader();
+  // Se logado e na tela de login/signup/forgot, vai para dash
+  const active = document.querySelector('.screen.active');
+  if (user && active && ['screen-login','screen-signup','screen-forgot'].includes(active.id)) {
+    showScreen('dash');
+  }
+  // Se não logado e na home, vai para login
+  if (!user && active && active.id === 'screen-home') {
+    showScreen('login');
+  }
+});
 
 // ═══════════════════════════════════════════════════════════
 //  BANCO DE QUESTÕES
@@ -89,7 +101,7 @@ function loader(show, msg='Processando...') {
 }
 
 function pin6(){ return String(Math.floor(100000+Math.random()*900000)); }
-function goHome(){ showScreen('home'); }
+function goHome(){ APP.user ? showScreen('home') : showScreen('login'); }
 function goHost(){ APP.user ? showScreen('dash') : showScreen('login'); }
 function goStudy(){ renderStudyCats(); showScreen('study'); }
 function togglePass(id,btn){ const i=document.getElementById(id); i.type=i.type==='password'?'text':'password'; btn.textContent=i.type==='password'?'👁️':'🙈'; }
@@ -671,6 +683,89 @@ async function doBancoAI(){
     p.forEach((q,i)=>{q.id='ai_'+Date.now()+'_'+i;BANCO.push(q);});
     showScreen('banco');renderBanco();toast(p.length+' questões adicionadas!');
   }catch(e){showScreen('banco');toast('Erro ao gerar',true);}
+}
+
+
+// ── RECUPERAR SENHA ────────────────────────────────────────
+async function doForgotPassword() {
+  const email = $('forgot-email').value.trim();
+  if (!email) { toast('Digite seu e-mail', true); return; }
+  loader(true, 'Enviando link...');
+  try {
+    await auth.sendPasswordResetEmail(email);
+    loader(false);
+    toast('Link enviado! Verifique seu e-mail.');
+    showScreen('login');
+  } catch(e) {
+    loader(false);
+    toast(e.code === 'auth/user-not-found' ? 'E-mail não encontrado' : e.message, true);
+  }
+}
+
+// ── ADMIN ──────────────────────────────────────────────────
+const ADMIN_UID = null; // deixe null para qualquer instrutor acessar, ou coloque seu UID
+
+async function goAdmin() {
+  if (!APP.user) { showScreen('login'); return; }
+  loader(true, 'Carregando painel...');
+  await loadAdminData();
+  loader(false);
+  showScreen('admin');
+}
+
+async function loadAdminData() {
+  // Estatísticas
+  const profilesSnap = await db.ref('profiles').once('value');
+  const codesSnap    = await db.ref('access_codes').once('value');
+  const profiles = profilesSnap.val() || {};
+  const codes    = codesSnap.val() || {};
+  const totalUsers = Object.keys(profiles).length;
+  const totalCodes = Object.keys(codes).length;
+  const activeCodes = Object.values(codes).filter(c => c.active).length;
+
+  $('admin-stats').innerHTML = `
+    <div class="rel-stat"><div class="rel-stat-val">${totalUsers}</div><div class="rel-stat-lbl">Instrutores</div></div>
+    <div class="rel-stat"><div class="rel-stat-val">${totalCodes}</div><div class="rel-stat-lbl">Códigos gerados</div></div>
+    <div class="rel-stat"><div class="rel-stat-val">${activeCodes}</div><div class="rel-stat-lbl">Códigos ativos</div></div>
+  `;
+
+  // Códigos de acesso
+  const codesList = Object.entries(codes).sort((a,b) => (b[1].created_at||0)-(a[1].created_at||0));
+  $('access-codes-list').innerHTML = codesList.length ? codesList.map(([id, c]) => `
+    <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-sm);padding:10px 14px;display:flex;align-items:center;gap:12px;">
+      <div style="font-family:var(--f-mono);font-size:16px;font-weight:800;color:var(--c-gold2);letter-spacing:3px;">${c.code}</div>
+      <div style="flex:1;font-size:11px;color:var(--c-muted);">${c.description||'Sem descrição'} • ${new Date(c.created_at).toLocaleDateString('pt-BR')}</div>
+      <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${c.active?'rgba(23,122,71,0.2)':'rgba(176,48,32,0.2)'};color:${c.active?'var(--c-green2)':'#e05040'};">${c.active?'ATIVO':'INATIVO'}</span>
+      <button class="btn btn-danger btn-sm" onclick="deactivateCode('${id}')">Desativar</button>
+    </div>`).join('') : '<div style="color:var(--c-muted);font-size:13px;padding:12px;">Nenhum código gerado ainda.</div>';
+
+  // Usuários
+  $('admin-users-tbody').innerHTML = Object.values(profiles).map(p => `
+    <tr>
+      <td><strong>${p.full_name||'—'}</strong></td>
+      <td style="font-size:11px;">${p.email||'—'}</td>
+      <td style="font-size:11px;">${p.organization||'—'}</td>
+      <td style="font-size:11px;">${p.oab||'—'}</td>
+      <td style="font-size:11px;">${p.created_at?new Date(p.created_at).toLocaleDateString('pt-BR'):'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="color:var(--c-muted);text-align:center;">Nenhum instrutor cadastrado.</td></tr>';
+}
+
+async function generateAccessCode() {
+  const desc = prompt('Descrição do código (ex: Turma Prefeitura Raposa Jan/2026):');
+  if (desc === null) return;
+  const code = Math.random().toString(36).substring(2,8).toUpperCase();
+  await db.ref('access_codes').push({
+    code, description: desc, active: true, created_at: Date.now(), created_by: APP.user.uid,
+  });
+  toast('Código gerado: ' + code);
+  await loadAdminData();
+}
+
+async function deactivateCode(id) {
+  if (!confirm('Desativar este código?')) return;
+  await db.ref('access_codes/' + id).update({ active: false });
+  toast('Código desativado.');
+  await loadAdminData();
 }
 
 // ── URL PIN ────────────────────────────────────────────────
