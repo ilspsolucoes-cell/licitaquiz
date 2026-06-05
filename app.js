@@ -165,7 +165,7 @@ function renderQuizGrid() {
         <div class="qcard-title">${q.title}</div>
         <div class="qcard-desc">${q.description||'Sem descrição'}</div>
         <div class="qcard-btns">
-          <button class="btn btn-gold btn-sm" onclick="hostGame('${q.id}')">▶️ Jogar</button>
+          <button class="btn btn-gold btn-sm" onclick="hostGame('${q.id}')">▶ Jogar</button>
           <button class="btn btn-ghost btn-sm" onclick="editQuiz('${q.id}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="deleteQuiz('${q.id}')">🗑️</button>
         </div>
@@ -244,7 +244,7 @@ function renderEditMain(i) {
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div><div class="lbl">TEMPO</div>
         <select class="inp" id="qedit-time" style="width:120px;">
-          ${[10,15,20,30,45,60].map(t=><option value="${t}" ${(q.time_limit||20)===t?'selected':''}>${t}s</option>).join('')}
+          ${[10,15,20,30,45,60].map(t=>`<option value="${t}" ${(q.time_limit||20)===t?'selected':''}>${t}s</option>`).join('')}
         </select></div>
       <button class="btn btn-outline btn-sm" onclick="aiSuggestQ()">✨ Sugerir com IA</button>
       <button class="btn btn-danger btn-sm" onclick="removeQ(${i})">🗑️ Remover</button>
@@ -305,7 +305,7 @@ async function aiSuggestQ() {
   setAI('Gerando pergunta...','Consultando Lei 14.133/2021'); showScreen('ai');
   try{
     const r=await callClaude('Gere UMA pergunta técnica de múltipla escolha sobre licitações (Lei 14.133/2021). Responda APENAS com JSON sem markdown:\n{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"CORRETA","is_correct":true},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false}]}');
-    const p=JSON.parse(r.replace(/json|/g,'').trim());
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
     APP.editQuiz.questions[idx]={...APP.editQuiz.questions[idx],...p};
     showScreen('edit'); renderEditSidebar(); renderEditMain(idx); toast('Pergunta gerada!');
   }catch(e){showScreen('edit');toast('Erro ao gerar',true);}
@@ -315,7 +315,7 @@ async function doGenerateAIQs() {
   syncCurrentQ(); setAI('Gerando 5 perguntas...','Aguarde...'); showScreen('ai');
   try{
     const r=await callClaude('Crie 5 perguntas técnicas sobre licitações (Lei 14.133/2021). APENAS JSON:\n{"qs":[{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"A","is_correct":true},{"text":"B","is_correct":false},{"text":"C","is_correct":false},{"text":"D","is_correct":false}]}]}');
-    const p=JSON.parse(r.replace(/json|/g,'').trim());
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
     p.qs.forEach((q,i)=>APP.editQuiz.questions.push({id:null,sort_order:APP.editQuiz.questions.length+i,...q}));
     showScreen('edit'); renderEditSidebar(); renderEditMain(APP.editQIdx); toast(p.qs.length+' perguntas adicionadas!');
   }catch(e){showScreen('edit');toast('Erro ao gerar',true);}
@@ -326,7 +326,7 @@ async function doGenerateAIQuiz() {
   setAI('Gerando quiz completo...','Criando questões técnicas'); showScreen('ai');
   try{
     const r=await callClaude('Crie um quiz de 6 perguntas sobre licitações (Lei 14.133/2021). APENAS JSON:\n{"title":"TÍTULO","description":"DESCRIÇÃO","icon":"EMOJI","qs":[{"text":"PERGUNTA","time_limit":20,"opts":[{"text":"CORRETA","is_correct":true},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false},{"text":"ERRADA","is_correct":false}]}]}');
-    const p=JSON.parse(r.replace(/json|/g,'').trim());
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
     const newRef=db.ref('quizzes/'+APP.user.uid).push();
     const qObj={};
     p.qs.forEach((q,i)=>{const qid=db.ref().push().key;qObj[qid]={text:q.text,time_limit:q.time_limit||20,sort_order:i,opts:q.opts};});
@@ -368,7 +368,7 @@ async function hostGame(quizId) {
   $('lobby-pin').textContent=gamePin; $('lobby-hint-pin').textContent=gamePin;
   $('lobby-quiz-name').textContent=quiz.title;
   $('lobby-quiz-meta').textContent=questions.length+' perguntas';
-  $('lobby-qr').src=https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(joinUrl)};
+  $('lobby-qr').src=`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(joinUrl)}`;
   $('lobby-chips').innerHTML='<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
   $('lobby-cnt-lbl').textContent='PARTICIPANTES — 0';
   loader(false); showScreen('lobby');
@@ -377,7 +377,7 @@ async function hostGame(quizId) {
 function renderLobbyPlayers() {
   const chips=$('lobby-chips'); if(!chips) return;
   const players=Object.values(APP.gamePlayers);
-  chips.innerHTML=players.length?players.map(p=><div class="player-chip">${p.avatar||'🎓'} ${p.nickname}</div>).join(''):'<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
+  chips.innerHTML=players.length?players.map(p=>`<div class="player-chip">${p.avatar||'🎓'} ${p.nickname}</div>`).join(''):'<span style="color:var(--c-muted);font-size:13px;">Aguardando alunos...</span>';
   $('lobby-cnt-lbl').textContent='PARTICIPANTES — '+players.length;
 }
 
@@ -405,10 +405,10 @@ function showHostQuestion(idx){
   APP.gameQIdx=idx; APP.gameResponses={};
   const q=APP.gameQuiz.questions[idx];
   $('host-q-text').textContent=q.text;
-  $('host-q-prog').textContent=Pergunta ${idx+1} de ${APP.gameQuiz.questions.length};
+  $('host-q-prog').textContent=`Pergunta ${idx+1} de ${APP.gameQuiz.questions.length}`;
   $('host-q-bar').style.width=((idx+1)/APP.gameQuiz.questions.length*100)+'%';
   $('host-resp-n').textContent='0';
-  $('host-ans-grid').innerHTML=q.opts.map((o,i)=><div class="ans-btn ans-${'abcd'[i]}"><div class="ans-letter">${ANS_COLS[i].l}</div><div class="ans-text">${o.text||o}</div></div>).join('');
+  $('host-ans-grid').innerHTML=q.opts.map((o,i)=>`<div class="ans-btn ans-${'abcd'[i]}"><div class="ans-letter">${ANS_COLS[i].l}</div><div class="ans-text">${o.text||o}</div></div>`).join('');
   APP.gameTimeLeft=q.time_limit||20;
   const orb=$('host-timer'); orb.textContent=APP.gameTimeLeft; orb.classList.remove('danger');
   clearInterval(APP.gameTimer);
@@ -434,8 +434,8 @@ async function showHostResults(){
   const correctIdx=q.opts.findIndex(o=>o.is_correct);
   const counts=q.opts.map((_,i)=>responses.filter(r=>r.opt_index===i).length);
   const maxC=Math.max(...counts,1);
-  $('res-chart').innerHTML=q.opts.map((o,i)=><div class="bar-col"><div class="bar-body" style="height:${Math.max(8,counts[i]/maxC*86)}%;background:${i===correctIdx?'var(--c-green2)':ANS_COLS[i].bg}">${counts[i]}</div><div class="bar-lbl">${ANS_COLS[i].l}</div></div>).join('');
-  $('res-opts').innerHTML=q.opts.map((o,i)=><div class="opt-rv ${o.is_correct?'ok':'no'}"><div class="opt-rv-ltr" style="background:${o.is_correct?'rgba(23,122,71,0.4)':ANS_COLS[i].bg+'66'}">${ANS_COLS[i].l}</div><div class="opt-rv-txt">${o.text||o}</div>${o.is_correct?'<div class="opt-rv-tag">✓ CORRETA</div>':''}</div>).join('');
+  $('res-chart').innerHTML=q.opts.map((o,i)=>`<div class="bar-col"><div class="bar-body" style="height:${Math.max(8,counts[i]/maxC*86)}%;background:${i===correctIdx?'var(--c-green2)':ANS_COLS[i].bg}">${counts[i]}</div><div class="bar-lbl">${ANS_COLS[i].l}</div></div>`).join('');
+  $('res-opts').innerHTML=q.opts.map((o,i)=>`<div class="opt-rv ${o.is_correct?'ok':'no'}"><div class="opt-rv-ltr" style="background:${o.is_correct?'rgba(23,122,71,0.4)':ANS_COLS[i].bg+'66'}">${ANS_COLS[i].l}</div><div class="opt-rv-txt">${o.text||o}</div>${o.is_correct?'<div class="opt-rv-tag">✓ CORRETA</div>':''}</div>`).join('');
   $('next-q-btn').textContent=APP.gameQIdx>=APP.gameQuiz.questions.length-1?'🏆 Ver Pódio':'Próxima →';
   showScreen('host-res');
 }
@@ -454,28 +454,28 @@ async function showHostPodium(){
   const players=snap.val()?Object.values(snap.val()).sort((a,b)=>(b.score||0)-(a.score||0)):[];
   $('podium-quiz-name').textContent=APP.gameQuiz.title;
   const pc=['r1','r2','r3'],pp=['p1','p2','p3'];
-  $('rank-list').innerHTML=players.length?players.map((p,i)=><div class="rank-row ${pc[i]||''}" style="animation-delay:${i*60}ms"><div class="rank-pos ${pp[i]||''}">${i+1}º</div><div class="rank-av">${p.avatar||'🎓'}</div><div class="rank-name">${p.nickname}</div><div class="rank-score">${p.score||0} pts</div></div>).join(''):'<div style="color:var(--c-muted);text-align:center;padding:20px;">Nenhum participante.</div>';
+  $('rank-list').innerHTML=players.length?players.map((p,i)=>`<div class="rank-row ${pc[i]||''}" style="animation-delay:${i*60}ms"><div class="rank-pos ${pp[i]||''}">${i+1}º</div><div class="rank-av">${p.avatar||'🎓'}</div><div class="rank-name">${p.nickname}</div><div class="rank-score">${p.score||0} pts</div></div>`).join(''):'<div style="color:var(--c-muted);text-align:center;padding:20px;">Nenhum participante.</div>';
   APP.lastReport={quizTitle:APP.gameQuiz.title,date:new Date().toLocaleDateString('pt-BR'),totalQ:APP.gameQuiz.questions.length,players};
   showScreen('podium');
 }
 
 function downloadCSV(){
   const rep=APP.lastReport; if(!rep){toast('Jogue uma sessão primeiro',true);return;}
-  let csv=LicitaQuiz\nQuiz:,${rep.quizTitle}\nData:,${rep.date}\n\nPos,Participante,Pontuação\n;
-  rep.players.forEach((p,i)=>{csv+=${i+1},"${p.nickname}",${p.score||0}\n;});
+  let csv=`LicitaQuiz\nQuiz:,${rep.quizTitle}\nData:,${rep.date}\n\nPos,Participante,Pontuação\n`;
+  rep.players.forEach((p,i)=>{csv+=`${i+1},"${p.nickname}",${p.score||0}\n`;});
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=LicitaQuiz_${rep.date.replace(/\//g,'-')}.csv;a.click();
+  const a=document.createElement('a');a.href=url;a.download=`LicitaQuiz_${rep.date.replace(/\//g,'-')}.csv`;a.click();
   URL.revokeObjectURL(url);toast('CSV baixado!');
 }
 
 function showRelatorio(){
   const rep=APP.lastReport; if(!rep){toast('Jogue uma sessão primeiro',true);return;}
-  $('rel-info').textContent=${rep.quizTitle} • ${rep.date} • ${rep.totalQ} perguntas;
+  $('rel-info').textContent=`${rep.quizTitle} • ${rep.date} • ${rep.totalQ} perguntas`;
   const max=(rep.totalQ||1)*1000;
   const avg=rep.players.length?Math.round(rep.players.reduce((s,p)=>s+(p.score||0),0)/rep.players.length):0;
-  $('rel-stats').innerHTML=<div class="rel-stat"><div class="rel-stat-val">${rep.players.length}</div><div class="rel-stat-lbl">Participantes</div></div><div class="rel-stat"><div class="rel-stat-val">${rep.totalQ}</div><div class="rel-stat-lbl">Perguntas</div></div><div class="rel-stat"><div class="rel-stat-val">${rep.players[0]?.score||0}</div><div class="rel-stat-lbl">Melhor placar</div></div><div class="rel-stat"><div class="rel-stat-val">${avg}</div><div class="rel-stat-lbl">Média turma</div></div>;
-  $('rel-tbody').innerHTML=rep.players.map((p,i)=>{const pct=Math.round((p.score||0)/max*100);return <tr><td><strong>${i+1}º</strong></td><td>${p.avatar||'🎓'} ${p.nickname}</td><td><strong style="color:var(--c-gold2);font-family:var(--f-mono);">${p.score||0}</strong></td><td>${Math.round(pct/100*(rep.totalQ||1))}</td><td style="min-width:80px;"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%"></div></div></td></tr>;}).join('');
+  $('rel-stats').innerHTML=`<div class="rel-stat"><div class="rel-stat-val">${rep.players.length}</div><div class="rel-stat-lbl">Participantes</div></div><div class="rel-stat"><div class="rel-stat-val">${rep.totalQ}</div><div class="rel-stat-lbl">Perguntas</div></div><div class="rel-stat"><div class="rel-stat-val">${rep.players[0]?.score||0}</div><div class="rel-stat-lbl">Melhor placar</div></div><div class="rel-stat"><div class="rel-stat-val">${avg}</div><div class="rel-stat-lbl">Média turma</div></div>`;
+  $('rel-tbody').innerHTML=rep.players.map((p,i)=>{const pct=Math.round((p.score||0)/max*100);return `<tr><td><strong>${i+1}º</strong></td><td>${p.avatar||'🎓'} ${p.nickname}</td><td><strong style="color:var(--c-gold2);font-family:var(--f-mono);">${p.score||0}</strong></td><td>${Math.round(pct/100*(rep.totalQ||1))}</td><td style="min-width:80px;"><div class="score-bar-bg"><div class="score-bar" style="width:${pct}%"></div></div></td></tr>`;}).join('');
   showScreen('relatorio');
 }
 
@@ -506,7 +506,7 @@ async function joinGame(){
 function renderAvatarGrid(){
   const g=$('av-grid'); if(!g) return;
   APP.selAvatar=null;
-  g.innerHTML=AVATARES.map(a=><div class="av-btn" onclick="selAv(this,'${a}')">${a}</div>).join('');
+  g.innerHTML=AVATARES.map(a=>`<div class="av-btn" onclick="selAv(this,'${a}')">${a}</div>`).join('');
 }
 function selAv(el,av){document.querySelectorAll('.av-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');APP.selAvatar=av;}
 
@@ -547,7 +547,7 @@ function showPlayerQ(idx,startedAt){
   $('player-q-prog').textContent='Pergunta '+(idx+1);
   $('player-q-bar').style.width=((idx+1)/(APP.gameQuiz.questions.length)*100)+'%';
   $('player-ans-grid').style.display='grid'; $('player-sent').style.display='none';
-  $('player-ans-grid').innerHTML=q.opts.map((o,i)=><button class="player-ans ans-${'abcd'[i]}" onclick="playerAnswer(${i},${o.is_correct},${startedAt},${q.time_limit||20})">${ANS_COLS[i].l}</button>).join('');
+  $('player-ans-grid').innerHTML=q.opts.map((o,i)=>`<button class="player-ans ans-${'abcd'[i]}" onclick="playerAnswer(${i},${o.is_correct},${startedAt},${q.time_limit||20})">${ANS_COLS[i].l}</button>`).join('');
   const tl=q.time_limit||20; APP.gameTimeLeft=tl;
   clearInterval(APP.playerTimer);
   const orb=$('player-timer'); orb.classList.remove('danger'); orb.textContent=tl;
@@ -603,7 +603,7 @@ function renderStudyCats(){
   const g=$('study-cats'); if(!g) return;
   g.innerHTML=cats.map(cat=>{
     const n=BANCO.filter(q=>q.cat===cat).length, on=APP.studyCats.includes(cat);
-    return <div class="cat-card ${on?'on':''}" onclick="toggleCat('${cat}',this)"><div class="cat-icon">${CAT_ICONS[cat]||'📋'}</div><div class="cat-name">${cat}</div><div class="cat-count">${n} questões</div></div>;
+    return `<div class="cat-card ${on?'on':''}" onclick="toggleCat('${cat}',this)"><div class="cat-icon">${CAT_ICONS[cat]||'📋'}</div><div class="cat-name">${cat}</div><div class="cat-count">${n} questões</div></div>`;
   }).join('');
   $('study-start-btn').disabled=APP.studyCats.length===0;
 }
@@ -625,11 +625,11 @@ function showStudyQ(idx){
   APP.studyQIdx=idx; APP.studyAnswered=false;
   const q=APP.studyQs[idx];
   $('study-q-text').textContent=q.q;
-  $('study-prog-lbl').textContent=Pergunta ${idx+1} de ${APP.studyQs.length};
+  $('study-prog-lbl').textContent=`Pergunta ${idx+1} de ${APP.studyQs.length}`;
   $('study-prog-bar').style.width=((idx+1)/APP.studyQs.length*100)+'%';
   $('study-score-n').textContent=APP.studyScore;
   $('study-expl').style.display='none'; $('study-next-row').style.display='none';
-  $('study-ans-grid').innerHTML=q.opts.map((o,i)=><button class="ans-btn ans-${'abcd'[i]}" onclick="studyAnswer(${i})"><div class="ans-letter">${ANS_COLS[i].l}</div><div class="ans-text">${o}</div></button>).join('');
+  $('study-ans-grid').innerHTML=q.opts.map((o,i)=>`<button class="ans-btn ans-${'abcd'[i]}" onclick="studyAnswer(${i})"><div class="ans-letter">${ANS_COLS[i].l}</div><div class="ans-text">${o}</div></button>`).join('');
   const tl=parseInt($('study-time').value)||0;
   clearInterval(APP.studyTimer);
   const orb=$('study-timer'); orb.classList.remove('danger');
@@ -651,8 +651,8 @@ async function studyAnswer(idx){
   });
   $('study-next-row').style.display='flex'; $('study-expl').style.display='block';
   $('study-expl-text').textContent='Buscando explicação...';
-  try{const txt=await callClaude(Explique em 2-3 frases por que "${q.opts[q.c]}" é a resposta correta para:\n${q.q}\nRef: ${q.ref});$('study-expl-text').textContent=txt;}
-  catch(e){$('study-expl-text').textContent=Resposta correta: ${q.opts[q.c]}. Ref.: ${q.ref}.;}
+  try{const txt=await callClaude(`Explique em 2-3 frases por que "${q.opts[q.c]}" é a resposta correta para:\n${q.q}\nRef: ${q.ref}`);$('study-expl-text').textContent=txt;}
+  catch(e){$('study-expl-text').textContent=`Resposta correta: ${q.opts[q.c]}. Ref.: ${q.ref}.`;}
 }
 
 function nextStudyQ(){if(APP.studyQIdx>=APP.studyQs.length-1)showStudyFinal();else showStudyQ(APP.studyQIdx+1);}
@@ -661,16 +661,16 @@ function showStudyFinal(){
   const pct=Math.round(APP.studyCorrect/APP.studyQs.length*100);
   $('sf-icon').textContent=pct>=80?'🏆':pct>=60?'📚':'💪';
   $('sf-title').textContent=pct>=80?'Excelente domínio!':pct>=60?'Bom resultado!':'Continue praticando!';
-  $('sf-stats').innerHTML=<div class="stat-box"><div class="stat-val">${APP.studyCorrect}</div><div class="stat-lbl">Acertos</div></div><div class="stat-box"><div class="stat-val">${APP.studyQs.length-APP.studyCorrect}</div><div class="stat-lbl">Erros</div></div><div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-lbl">Aproveit.</div></div><div class="stat-box"><div class="stat-val">${APP.studyScore}</div><div class="stat-lbl">Pontos</div></div>;
+  $('sf-stats').innerHTML=`<div class="stat-box"><div class="stat-val">${APP.studyCorrect}</div><div class="stat-lbl">Acertos</div></div><div class="stat-box"><div class="stat-val">${APP.studyQs.length-APP.studyCorrect}</div><div class="stat-lbl">Erros</div></div><div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-lbl">Aproveit.</div></div><div class="stat-box"><div class="stat-val">${APP.studyScore}</div><div class="stat-lbl">Pontos</div></div>`;
   showScreen('study-final');
 }
 
 // ── BANCO ──────────────────────────────────────────────────
 function renderBanco(){
   const cats=['Todos',...new Set(BANCO.map(q=>q.cat))];
-  $('banco-filters').innerHTML=cats.map(c=><div class="filter-pill ${APP.bancoFilter===c?'on':''}" onclick="setBancoFilter('${c}')">${c}</div>).join('');
+  $('banco-filters').innerHTML=cats.map(c=>`<div class="filter-pill ${APP.bancoFilter===c?'on':''}" onclick="setBancoFilter('${c}')">${c}</div>`).join('');
   const items=APP.bancoFilter==='Todos'?BANCO:BANCO.filter(q=>q.cat===APP.bancoFilter);
-  $('banco-items').innerHTML=items.map(q=><div class="banco-item"><div class="banco-item-q">${q.q}</div><div class="banco-item-foot"><span class="badge badge-gold">${q.cat}</span><span class="badge badge-teal">${q.ref}</span><span style="margin-left:auto;font-size:10px;color:var(--c-muted);">${ANS_COLS[q.c].l}: ${q.opts[q.c]}</span></div></div>).join('');
+  $('banco-items').innerHTML=items.map(q=>`<div class="banco-item"><div class="banco-item-q">${q.q}</div><div class="banco-item-foot"><span class="badge badge-gold">${q.cat}</span><span class="badge badge-teal">${q.ref}</span><span style="margin-left:auto;font-size:10px;color:var(--c-muted);">${ANS_COLS[q.c].l}: ${q.opts[q.c]}</span></div></div>`).join('');
 }
 
 function setBancoFilter(cat){APP.bancoFilter=cat;renderBanco();}
@@ -679,7 +679,7 @@ async function doBancoAI(){
   setAI('Gerando novas questões...','Criando 5 questões para o banco');showScreen('ai');
   try{
     const r=await callClaude('Gere 5 questões de múltipla escolha sobre licitações (Lei 14.133/2021). APENAS JSON:\n[{"cat":"CATEGORIA","q":"PERGUNTA","opts":["A","B","C","D"],"c":0,"ref":"Art. X"}]\nCategorias: Modalidades,Contratos,Penalidades,Habilitação,Planejamento. c=índice da correta (0-3).');
-    const p=JSON.parse(r.replace(/json|/g,'').trim());
+    const p=JSON.parse(r.replace(/```json|```/g,'').trim());
     p.forEach((q,i)=>{q.id='ai_'+Date.now()+'_'+i;BANCO.push(q);});
     showScreen('banco');renderBanco();toast(p.length+' questões adicionadas!');
   }catch(e){showScreen('banco');toast('Erro ao gerar',true);}
