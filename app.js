@@ -244,7 +244,7 @@ function renderEditMain(i) {
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <div><div class="lbl">TEMPO</div>
         <select class="inp" id="qedit-time" style="width:120px;">
-          ${[10,15,20,30,45,60].map(t=>`<option value="${t}" ${(q.time_limit||20)===t?'selected':''}>${t}s</option>`).join('')}
+          ${[10,15,20,30,45,60].map(t=>'<option value="'+t+'" '+((q.time_limit||20)===t?'selected':'')+'>'+t+'s</option>').join('')}
         </select></div>
       <button class="btn btn-outline btn-sm" onclick="aiSuggestQ()">✨ Sugerir com IA</button>
       <button class="btn btn-danger btn-sm" onclick="removeQ(${i})">🗑️ Remover</button>
