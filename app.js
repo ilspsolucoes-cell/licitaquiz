@@ -303,10 +303,20 @@ function hostGame(quizId) {
   const quiz = APP.quizzes.find(q => q.id === quizId);
   if (!quiz || !quiz.questions.length) { toast('Adicione perguntas antes de jogar', true); return; }
   const gamePin = pin6();
+  // Salva as questões no Firebase para os alunos acessarem
+  const questionsForDB = {};
+  quiz.questions.forEach((q, i) => {
+    questionsForDB[i] = {
+      text: q.text,
+      time_limit: q.time_limit || 20,
+      opts: q.opts.map(o => ({text: o.text||o, is_correct: o.is_correct||false}))
+    };
+  });
   db.ref('sessions/' + gamePin).set({
     quiz_id: quizId, pin: gamePin, status: 'lobby',
     current_question_index: 0, quiz_title: quiz.title,
     total_questions: quiz.questions.length,
+    questions: questionsForDB,
   });
   APP.gamePin = gamePin; APP.gameQuiz = quiz;
   APP.gameQIdx = 0; APP.gamePlayers = {}; APP.gameResponses = {};
@@ -527,20 +537,11 @@ function joinWithNick() {
 }
 
 function loadPlayerQuestion(session) {
-  // Get quiz questions from the host's local storage via Firebase
-  db.ref('sessions/'+APP.gamePin).once('value', snap => {
-    const s = snap.val();
-    const idx = s.current_question_index;
-    // Get question from session data
-    db.ref('sessions/'+APP.gamePin+'/questions/'+idx).once('value', qSnap => {
-      if (!qSnap.exists()) {
-        // Questions not in DB yet, show waiting
-        showScreen('wait');
-        return;
-      }
-      const q = qSnap.val();
-      showPlayerQ(q, idx, s.question_started_at, s.total_questions||1);
-    });
+  const idx = session.current_question_index;
+  db.ref('sessions/'+APP.gamePin+'/questions/'+idx).once('value', qSnap => {
+    if (!qSnap.exists()) { showScreen('wait'); return; }
+    const q = qSnap.val();
+    showPlayerQ(q, idx, session.question_started_at, session.total_questions||1);
   });
 }
 
