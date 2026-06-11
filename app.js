@@ -538,8 +538,20 @@ function joinWithNick() {
 
 function loadPlayerQuestion(session) {
   const idx = session.current_question_index;
+  console.log('Loading question', idx, 'from session', APP.gamePin);
   db.ref('sessions/'+APP.gamePin+'/questions/'+idx).once('value', qSnap => {
-    if (!qSnap.exists()) { showScreen('wait'); return; }
+    console.log('Question exists:', qSnap.exists(), qSnap.val());
+    if (!qSnap.exists()) {
+      // Try loading all questions from session
+      db.ref('sessions/'+APP.gamePin+'/questions').once('value', allSnap => {
+        console.log('All questions:', allSnap.val());
+        if (!allSnap.exists()) { showScreen('wait'); return; }
+        const q = allSnap.val()[idx];
+        if (!q) { showScreen('wait'); return; }
+        showPlayerQ(q, idx, session.question_started_at, session.total_questions||1);
+      });
+      return;
+    }
     const q = qSnap.val();
     showPlayerQ(q, idx, session.question_started_at, session.total_questions||1);
   });
